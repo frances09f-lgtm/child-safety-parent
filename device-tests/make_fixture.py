@@ -15,3 +15,17 @@ a=s.index('class ParentTheme');b=s.index('\nFuture<void> main()',a)
 s=s[:a]+'''class ParentTheme {static final dark = production.ParentTheme.dark;static Future<void> load()=>production.ParentTheme.load();static Future<void> set(bool v)=>production.ParentTheme.set(v);}
 '''+s[b:]
 Path('lib/runtime_fixture.dart').write_text(s)
+
+# Mock zone writes and reads inside isolated APK; no real accounts or server.
+a=Path('lib/api.dart').read_text()
+pos=a.index('  static Future<dynamic> request(');end=a.index('  static Future<void> resetPassword',pos)
+a=a[:pos]+"""  static Map<String,dynamic> fixtureZone={'id':1,'name':'Sample school','radius':300,'latitude':18.52,'longitude':73.85,'inside':true};
+  static Future<dynamic> request(String path,{String method='GET',Object? data}) async {
+    if(path.startsWith('/api/zones/')){if(method=='PUT'){fixtureZone={...fixtureZone,...Map<String,dynamic>.from(data as Map)};}return {'zones':[fixtureZone],'events':[]};}
+    if(path.startsWith('/api/activity/'))return {'days':[],'lastSync':null};
+    throw Exception('Only isolated fixture routes are allowed');
+  }
+"""+a[end:]
+Path('lib/api.dart').write_text(a)
+# Reload the saved mock zone so the UI asserts actual editing logic.
+p=Path('lib/runtime_fixture.dart');v=p.read_text().replace("'zones':[{'id':1,'name':'Sample school','radius':300,'latitude':18.52,'longitude':73.85,'inside':true}]","'zones':[FamilyApi.fixtureZone]");p.write_text(v)

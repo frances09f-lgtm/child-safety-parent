@@ -849,7 +849,7 @@ class _FamilyHomeState extends State<FamilyHome> {
         margin: EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
           color: accent
-              ? Color(0xfff0fdf4)
+              ? (ParentTheme.dark.value ? Color(0xff163629) : Color(0xfff0fdf4))
               : ParentTheme.dark.value
               ? Color(0xff1e293b)
               : Color(0xfff8fafc),
@@ -1005,7 +1005,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                       ? ParentTheme.dark.value
                             ? Color(0xff1e293b)
                             : Color(0xfff8fafc)
-                      : Color(0xfffffbeb),
+                      : (ParentTheme.dark.value ? Color(0xff3a2b18) : Color(0xfffffbeb)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1612,7 +1612,9 @@ class _ChildDetailState extends State<ChildDetail> {
                                 Container(
                                   padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Color(0xffecfdf5),
+                                    color: ParentTheme.dark.value
+                                        ? Color(0xff163629)
+                                        : Color(0xffecfdf5),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(
