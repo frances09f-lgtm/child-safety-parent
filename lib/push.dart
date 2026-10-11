@@ -110,6 +110,8 @@ class ParentPush {
     await messages?.cancel();
     if (!kIsWeb && Firebase.apps.isNotEmpty)
       await FirebaseMessaging.instance.deleteToken();
+    if (!kIsWeb && Firebase.apps.isNotEmpty)
+      await FirebaseMessaging.instance.setAutoInitEnabled(false);
     token = null;
     status = 'Notifications disabled';
   }

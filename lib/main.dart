@@ -183,6 +183,7 @@ class _FamilyHomeState extends State<FamilyHome> {
     });
     if (ok) {
       await refresh();
+      await ParentPush.enable();
       timer = Timer.periodic(const Duration(seconds: 30), (_) => refresh());
     }
   }
@@ -767,7 +768,16 @@ class _FamilyHomeState extends State<FamilyHome> {
           ),
           onPressed: () async {
             timer?.cancel();
-            await ParentPush.disable();
+            try {
+              await ParentPush.disable();
+            } catch (_) {
+              if (mounted)
+                setState(
+                  () => error =
+                      'Could not remove push registration. Try logout again when connected.',
+                );
+              return;
+            }
             await FamilyApi.logout();
             if (mounted)
               setState(() {
