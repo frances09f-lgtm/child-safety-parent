@@ -785,21 +785,45 @@ class _FamilyHomeState extends State<FamilyHome> {
           title: Text('Safe-zone notifications'),
           subtitle: Text(ZoneAlerts.status),
           value: ZoneAlerts.enabled,
-          onChanged: (v) async {
-            try {
-              if (v) {
-                await refresh();
-                await ZoneAlerts.enable(children);
-              } else {
-                await ZoneAlerts.disable();
-              }
-            } catch (_) {
-              ZoneAlerts.status =
-                  'Could not enable. Check connection and permission.';
-            }
-            if (mounted) setState(() {});
-          },
+          onChanged: ZoneAlerts.changing
+              ? null
+              : (v) async {
+                  setState(() {
+                    ZoneAlerts.changing = true;
+                    ZoneAlerts.status = v ? 'Turning on...' : 'Turning off...';
+                  });
+                  final progress = Timer.periodic(
+                    const Duration(milliseconds: 400),
+                    (_) {
+                      if (mounted) setState(() {});
+                    },
+                  );
+                  try {
+                    if (v) {
+                      await ZoneAlerts.enable(children);
+                    } else {
+                      await ZoneAlerts.disable();
+                    }
+                  } catch (_) {
+                    ZoneAlerts.status =
+                        'Could not save notification settings. Restart and retry.';
+                  } finally {
+                    progress.cancel();
+                    ZoneAlerts.changing = false;
+                    if (mounted) setState(() {});
+                  }
+                },
         ),
+        if (ZoneAlerts.changing)
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(),
+          ),
+        if (ZoneAlerts.status.contains('blocked'))
+          Text(
+            'Open Android Settings > Apps > Child Safety Parent > Notifications and allow notifications.',
+            style: TextStyle(fontSize: 11, color: muted),
+          ),
         Text(
           'Alerts on entry and exit. While open: checks every 30 seconds. Background: Android schedules checks from 15 minutes; battery limits, no internet or force-stop can delay or stop alerts. Not instant push. Remembered login required in background.',
           style: TextStyle(fontSize: 11, color: muted),

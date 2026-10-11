@@ -40,7 +40,8 @@ class ZoneAlerts {
   static const job = 'safe-zone-poll';
   static final local = FlutterLocalNotificationsPlugin();
   static final pendingDevice = ValueNotifier<String?>(null);
-  static bool enabled = false;
+  static bool enabled = false, changing = false;
+  static bool workerReady = false;
   static String status = 'Off';
   static String? launchPayload;
   static Future<void> queue = Future.value();
@@ -85,12 +86,20 @@ class ZoneAlerts {
   static Future<void> initialize() async {
     if (kIsWeb) return;
     await initializeLocal();
-    await Workmanager().initialize(zoneDispatcher);
+    await initializeWorker();
     enabled = await isEnabled();
     status = enabled ? 'Enabled - background checks can be delayed' : 'Off';
     final launch = await local.getNotificationAppLaunchDetails();
     if (launch?.didNotificationLaunchApp == true)
       receive(launch?.notificationResponse?.payload);
+  }
+
+  static Future<void> initializeWorker() async {
+    if (workerReady) return;
+    await Workmanager()
+        .initialize(zoneDispatcher)
+        .timeout(const Duration(seconds: 15));
+    workerReady = true;
   }
 
   static Future<void> restoreSchedule() async {
@@ -100,6 +109,7 @@ class ZoneAlerts {
       receive(payload);
     }
     if (!enabled || kIsWeb) return;
+    await initializeWorker();
     await Workmanager().registerPeriodicTask(
       job,
       job,
@@ -114,29 +124,60 @@ class ZoneAlerts {
       status = 'Available in Android app';
       return;
     }
-    await initializeLocal();
-    final permission = await local
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
-        ?.requestNotificationsPermission();
-    if (permission == false) {
-      status = 'Permission Required in Android Settings';
+    status = 'Preparing Android notifications...';
+    try {
+      await initializeLocal().timeout(const Duration(seconds: 15));
+    } catch (_) {
+      status = 'Android notification setup failed. Restart the app and retry.';
       return;
     }
-
-    // Baseline before enabling: do not turn old history into new alerts.
-    for (final child in children) {
-      await consume(
-        child,
-        (child['zonesData']?['events'] as List?) ?? [],
-        baseline: true,
-      );
+    status = 'Waiting for Android notification permission...';
+    final android = local
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    try {
+      await android?.requestNotificationsPermission();
+      if (await android?.areNotificationsEnabled() != true) {
+        status = 'Notifications blocked. Allow them in Android app Settings.';
+        return;
+      }
+    } catch (_) {
+      status = 'Could not request Android notification permission.';
+      return;
+    }
+    status = 'Loading safe-zone history...';
+    try {
+      for (final child in children) {
+        final data = await FamilyApi.request(
+          '/api/zones/${Uri.encodeComponent(child['deviceId'])}',
+        ).timeout(const Duration(seconds: 20));
+        await consume(
+          child,
+          (data?['events'] as List?) ?? [],
+          baseline: true,
+        ).timeout(const Duration(seconds: 15));
+      }
+    } catch (_) {
+      status =
+          'Could not load zone history. Check server connection and retry.';
+      return;
+    }
+    status = 'Starting background checks...';
+    try {
+      await initializeWorker();
+    } catch (_) {
+      status = 'Background setup failed. Restart the app and retry.';
+      return;
     }
     await FamilyApi.storage.write(key: 'zoneAlertsEnabled', value: 'true');
     enabled = true;
-    status = 'Enabled - background checks can be delayed';
-    await restoreSchedule();
+    try {
+      await restoreSchedule().timeout(const Duration(seconds: 15));
+      status = 'Enabled - background checks can be delayed';
+    } catch (_) {
+      status = 'Enabled while open; background setup needs retry.';
+    }
   }
 
   static Future<void> disable() async {
