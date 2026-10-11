@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 
 import 'api.dart';
 import 'push.dart';
+import 'zone_alerts.dart';
 import 'activity.dart';
 
 const green = Color(0xff16a34a);
@@ -32,6 +33,7 @@ class ParentTheme {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ParentTheme.load();
+  await ZoneAlerts.initialize();
   runApp(ParentApp());
 }
 
@@ -218,7 +220,22 @@ class _FamilyHomeState extends State<FamilyHome> {
   @override
   void initState() {
     super.initState();
+    ZoneAlerts.pendingDevice.addListener(openZoneNotification);
     _restore();
+  }
+
+  Future<void> openZoneNotification() async {
+    final device = ZoneAlerts.pendingDevice.value;
+    if (!signed || device == null || !mounted) return;
+    final matches = children.where((c) => c['deviceId'] == device);
+    if (matches.isEmpty) return;
+    ZoneAlerts.pendingDevice.value = null;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChildDetail(child: matches.first, initialTab: 1),
+      ),
+    );
   }
 
   Future<void> _restore() async {
@@ -232,6 +249,8 @@ class _FamilyHomeState extends State<FamilyHome> {
     });
     if (ok) {
       await refresh();
+      await ZoneAlerts.restoreSchedule();
+      await openZoneNotification();
       await ParentPush.enable();
       timer = Timer.periodic(Duration(seconds: 30), (_) => refresh());
     }
@@ -240,6 +259,7 @@ class _FamilyHomeState extends State<FamilyHome> {
   @override
   void dispose() {
     timer?.cancel();
+    ZoneAlerts.pendingDevice.removeListener(openZoneNotification);
     oldPass.dispose();
     newPass.dispose();
     confirmPass.dispose();
@@ -261,6 +281,7 @@ class _FamilyHomeState extends State<FamilyHome> {
           final id = Uri.encodeComponent(d['deviceId']);
           final latest = await FamilyApi.request('/api/location/latest/$id');
           final zones = await FamilyApi.request('/api/zones/$id');
+          await ZoneAlerts.consume(d, (zones?['events'] as List?) ?? []);
           return {...d, 'latest': latest, 'zonesData': zones};
         }),
       );
@@ -298,6 +319,8 @@ class _FamilyHomeState extends State<FamilyHome> {
         error = '';
       });
       await refresh();
+      await ZoneAlerts.restoreSchedule();
+      await openZoneNotification();
       await ParentPush.enable();
       timer?.cancel();
       timer = Timer.periodic(Duration(seconds: 30), (_) => refresh());
@@ -753,6 +776,33 @@ class _FamilyHomeState extends State<FamilyHome> {
       ]),
       SizedBox(height: 16),
       panel([
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: Text('Safe-zone notifications'),
+          subtitle: Text(ZoneAlerts.status),
+          value: ZoneAlerts.enabled,
+          onChanged: (v) async {
+            try {
+              if (v) {
+                await refresh();
+                await ZoneAlerts.enable(children);
+              } else {
+                await ZoneAlerts.disable();
+              }
+            } catch (_) {
+              ZoneAlerts.status =
+                  'Could not enable. Check connection and permission.';
+            }
+            if (mounted) setState(() {});
+          },
+        ),
+        Text(
+          'Alerts on entry and exit. While open: checks every 30 seconds. Background: Android schedules checks from 15 minutes; battery limits, no internet or force-stop can delay or stop alerts. Not instant push. Remembered login required in background.',
+          style: TextStyle(fontSize: 11, color: muted),
+        ),
+      ]),
+      SizedBox(height: 16),
+      panel([
         Text(
           'PUSH ALERTS',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
@@ -762,6 +812,8 @@ class _FamilyHomeState extends State<FamilyHome> {
         SizedBox(height: 12),
         FilledButton.icon(
           onPressed: () async {
+            await ZoneAlerts.restoreSchedule();
+            await openZoneNotification();
             await ParentPush.enable();
             if (mounted) setState(() {});
           },
@@ -822,6 +874,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                 );
               return;
             }
+            await ZoneAlerts.disable();
             await FamilyApi.logout();
             if (mounted)
               setState(() {
@@ -1114,7 +1167,8 @@ class MiniMap extends StatelessWidget {
 
 class ChildDetail extends StatefulWidget {
   final Map<String, dynamic> child;
-  ChildDetail({super.key, required this.child});
+  final int initialTab;
+  ChildDetail({super.key, required this.child, this.initialTab = 0});
   @override
   State<ChildDetail> createState() => _ChildDetailState();
 }
@@ -1421,6 +1475,7 @@ class _ChildDetailState extends State<ChildDetail> {
     final name = widget.child['childName'] ?? 'Child';
     return DefaultTabController(
       length: 5,
+      initialIndex: widget.initialTab,
       child: Scaffold(
         appBar: AppBar(
           title: Column(

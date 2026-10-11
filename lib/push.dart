@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'api.dart';
+import 'zone_alerts.dart';
 
 class ParentPush {
   static String status = 'Notifications not enabled';
@@ -27,11 +28,7 @@ class ParentPush {
           ),
         );
       await FirebaseMessaging.instance.setAutoInitEnabled(true);
-      await local.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-        ),
-      );
+      await ZoneAlerts.initializeLocal();
       await local
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
