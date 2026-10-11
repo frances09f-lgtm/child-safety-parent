@@ -54,6 +54,10 @@ class _ParentAppState extends State<ParentApp> {
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: green),
       scaffoldBackgroundColor: const Color(0xfff4f8f5),
+      cardTheme: const CardThemeData(
+        color: Colors.white,
+        surfaceTintColor: Colors.transparent,
+      ),
       useMaterial3: true,
     ),
     darkTheme: ThemeData(
