@@ -196,7 +196,10 @@ class FamilyApi {
   }
 
   static Future<void> logout() async {
-    await storage.deleteAll();
+    // Keep one-time server/public app configuration across logout/expiry.
+    await storage.delete(key: 'refresh');
+    await storage.delete(key: 'rememberUntil');
+    await storage.delete(key: 'email');
     _token = '';
     _refresh = '';
     email = '';

@@ -26,7 +26,7 @@ jobs:
           echo "$CHILD_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/child-release.jks"
           printf '\nCHILD_KEYSTORE_FILE=%s\nCHILD_KEYSTORE_PASSWORD=%s\nCHILD_KEY_ALIAS=%s\nCHILD_KEY_PASSWORD=%s\n' "$RUNNER_TEMP/child-release.jks" "$CHILD_KEYSTORE_PASSWORD" "$CHILD_KEY_ALIAS" "$CHILD_KEY_PASSWORD" >> android/gradle.properties
       - run: flutter pub get && flutter analyze --no-fatal-infos
-      - run: flutter build apk --release --target-platform android-arm64 --build-name=1.0.1 --build-number=1
+      - run: flutter build apk --release --target-platform android-arm64 --build-name=1.1.0 --build-number=2
       - uses: actions/upload-artifact@v4
         with:
           name: child-safety-parent-apk
