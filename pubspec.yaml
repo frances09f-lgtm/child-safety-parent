@@ -1,0 +1,18 @@
+name: child_safety_parent
+description: Private family overview and child location dashboard.
+publish_to: none
+version: 1.0.1+1
+environment:
+  sdk: ^3.10.4
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.3.0
+  flutter_secure_storage: ^9.2.4
+  flutter_map: ^8.2.2
+  latlong2: ^0.9.1
+  intl: ^0.20.2
+dev_dependencies:
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
