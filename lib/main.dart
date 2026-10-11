@@ -1,18 +1,38 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
+
 import 'api.dart';
 import 'push.dart';
 import 'activity.dart';
 
 const green = Color(0xff16a34a);
-const ink = Color(0xff0f172a);
-const muted = Color(0xff64748b);
-const pale = Color(0xfff1f5f9);
-void main() {
-  runApp(const ParentApp());
+Color get ink => ParentTheme.dark.value ? Color(0xffe2e8f0) : Color(0xff0f172a);
+Color get muted =>
+    ParentTheme.dark.value ? Color(0xff94a3b8) : Color(0xff64748b);
+Color get pale =>
+    ParentTheme.dark.value ? Color(0xff0b1220) : Color(0xfff1f5f9);
+Color get surface => ParentTheme.dark.value ? Color(0xff172235) : Colors.white;
+
+class ParentTheme {
+  static final dark = ValueNotifier(false);
+  static Future<void> load() async {
+    dark.value = await FamilyApi.storage.read(key: "darkMode") == "true";
+  }
+
+  static Future<void> set(bool value) async {
+    dark.value = value;
+    await FamilyApi.storage.write(key: "darkMode", value: "$value");
+  }
+}
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await ParentTheme.load();
+  runApp(ParentApp());
 }
 
 String stamp(dynamic value) {
@@ -44,68 +64,100 @@ LatLng? point(Map<String, dynamic>? d) {
 }
 
 class ParentApp extends StatefulWidget {
-  const ParentApp({super.key});
+  ParentApp({super.key});
   @override
   State<ParentApp> createState() => _ParentAppState();
 }
 
 class _ParentAppState extends State<ParentApp> {
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Child Safety Parent',
-    debugShowCheckedModeBanner: false,
-    theme: ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: green),
-      scaffoldBackgroundColor: pale,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        titleTextStyle: TextStyle(
-          color: ink,
-          fontSize: 16,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-      cardTheme: const CardThemeData(
-        color: Colors.white,
-        surfaceTintColor: Colors.transparent,
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xfff8fafc),
-        contentPadding: const EdgeInsets.all(14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xffe2e8f0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xffe2e8f0)),
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: green,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(48),
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+    valueListenable: ParentTheme.dark,
+    builder: (context, dark, _) => MaterialApp(
+      title: 'Child Safety Parent',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        dialogTheme: DialogThemeData(
+          backgroundColor: surface,
+          surfaceTintColor: Colors.transparent,
           shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          titleTextStyle: TextStyle(
+            color: ink,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+          ),
+          contentTextStyle: TextStyle(color: muted, fontSize: 14, height: 1.45),
+          insetPadding: EdgeInsets.all(20),
+        ),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: green,
+          brightness: dark ? Brightness.dark : Brightness.light,
+        ),
+        scaffoldBackgroundColor: pale,
+        appBarTheme: AppBarTheme(
+          backgroundColor: surface,
+          surfaceTintColor: Colors.transparent,
+          titleTextStyle: TextStyle(
+            color: ink,
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        cardTheme: CardThemeData(
+          color: surface,
+          surfaceTintColor: Colors.transparent,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: ParentTheme.dark.value
+              ? Color(0xff1e293b)
+              : Color(0xfff8fafc),
+          contentPadding: EdgeInsets.all(14),
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(
+              color: ParentTheme.dark.value
+                  ? Color(0xff334155)
+                  : Color(0xffe2e8f0),
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(
+              color: ParentTheme.dark.value
+                  ? Color(0xff334155)
+                  : Color(0xffe2e8f0),
+            ),
+          ),
+        ),
+        filledButtonTheme: FilledButtonThemeData(
+          style: FilledButton.styleFrom(
+            backgroundColor: green,
+            foregroundColor: Colors.white,
+            minimumSize: Size.fromHeight(48),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
           ),
         ),
       ),
+      home: FamilyHome(),
     ),
-    home: const FamilyHome(),
   );
 }
 
 Widget panel(List<Widget> children, {double radius = 18}) => Container(
-  padding: const EdgeInsets.all(16),
+  padding: EdgeInsets.all(16),
   decoration: BoxDecoration(
-    color: Colors.white,
+    color: surface,
     borderRadius: BorderRadius.circular(radius),
-    border: Border.all(color: const Color(0xffe2e8f0)),
-    boxShadow: const [
+    border: Border.all(
+      color: ParentTheme.dark.value ? Color(0xff334155) : Color(0xffe2e8f0),
+    ),
+    boxShadow: [
       BoxShadow(color: Color(0x09000000), blurRadius: 3, offset: Offset(0, 2)),
     ],
   ),
@@ -115,18 +167,14 @@ Widget panel(List<Widget> children, {double radius = 18}) => Container(
   ),
 );
 Widget label(String text) => Padding(
-  padding: const EdgeInsets.only(bottom: 7, top: 12),
+  padding: EdgeInsets.only(bottom: 7, top: 12),
   child: Text(
     text,
-    style: const TextStyle(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      color: muted,
-    ),
+    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: muted),
   ),
 );
 Widget pill(String text, {Color color = green}) => Container(
-  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+  padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
   decoration: BoxDecoration(
     color: color.withValues(alpha: .1),
     borderRadius: BorderRadius.circular(30),
@@ -148,7 +196,7 @@ String ago(dynamic value) {
 }
 
 class FamilyHome extends StatefulWidget {
-  const FamilyHome({super.key});
+  FamilyHome({super.key});
   @override
   State<FamilyHome> createState() => _FamilyHomeState();
 }
@@ -185,7 +233,7 @@ class _FamilyHomeState extends State<FamilyHome> {
     if (ok) {
       await refresh();
       await ParentPush.enable();
-      timer = Timer.periodic(const Duration(seconds: 30), (_) => refresh());
+      timer = Timer.periodic(Duration(seconds: 30), (_) => refresh());
     }
   }
 
@@ -252,7 +300,7 @@ class _FamilyHomeState extends State<FamilyHome> {
       await refresh();
       await ParentPush.enable();
       timer?.cancel();
-      timer = Timer.periodic(const Duration(seconds: 30), (_) => refresh());
+      timer = Timer.periodic(Duration(seconds: 30), (_) => refresh());
     } catch (e) {
       if (mounted)
         setState(() {
@@ -267,29 +315,27 @@ class _FamilyHomeState extends State<FamilyHome> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (c) => AlertDialog(
-        title: const Text('Reset Password'),
+        title: Text('Reset Password'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Enter your parent email address to request a reset link.',
-            ),
-            const SizedBox(height: 12),
+            Text('Enter your parent email address to request a reset link.'),
+            SizedBox(height: 12),
             TextField(
               controller: reset,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(hintText: 'Parent email'),
+              decoration: InputDecoration(hintText: 'Parent email'),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('Send Reset Mail'),
+            child: Text('Send Reset Mail'),
           ),
         ],
       ),
@@ -299,7 +345,7 @@ class _FamilyHomeState extends State<FamilyHome> {
         await FamilyApi.resetPassword(reset.text, key.text);
         if (mounted)
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Reset requested. Check your email.')),
+            SnackBar(content: Text('Reset requested. Check your email.')),
           );
       } catch (e) {
         if (mounted)
@@ -328,7 +374,7 @@ class _FamilyHomeState extends State<FamilyHome> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Password updated.')));
+        ).showSnackBar(SnackBar(content: Text('Password updated.')));
     } catch (e) {
       if (mounted)
         setState(() => error = e.toString().replaceFirst('Exception: ', ''));
@@ -348,15 +394,12 @@ class _FamilyHomeState extends State<FamilyHome> {
               children: [
                 Text(
                   section == 0 ? 'Your Family' : 'Parent Account Settings',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
                 if (section == 0)
                   Text(
                     '${children.length} protected devices connected',
-                    style: const TextStyle(fontSize: 11, color: muted),
+                    style: TextStyle(fontSize: 11, color: muted),
                   ),
               ],
             ),
@@ -365,12 +408,12 @@ class _FamilyHomeState extends State<FamilyHome> {
                     IconButton(
                       tooltip: 'Refresh reports',
                       onPressed: busy ? null : refresh,
-                      icon: const Icon(Icons.refresh),
+                      icon: Icon(Icons.refresh),
                     ),
                     IconButton(
                       tooltip: 'Settings',
                       onPressed: () => setState(() => section = 1),
-                      icon: const Icon(Icons.settings_outlined),
+                      icon: Icon(Icons.settings_outlined),
                     ),
                   ]
                 : null,
@@ -378,12 +421,12 @@ class _FamilyHomeState extends State<FamilyHome> {
     bottomNavigationBar: !signed
         ? null
         : BottomNavigationBar(
-            backgroundColor: Colors.white,
+            backgroundColor: surface,
             selectedItemColor: green,
-            unselectedItemColor: const Color(0xff94a3b8),
+            unselectedItemColor: Color(0xff94a3b8),
             currentIndex: section,
             onTap: (v) => setState(() => section = v),
-            items: const [
+            items: [
               BottomNavigationBarItem(
                 icon: Icon(Icons.family_restroom),
                 label: 'Children',
@@ -395,7 +438,7 @@ class _FamilyHomeState extends State<FamilyHome> {
             ],
           ),
     body: !ready
-        ? const Center(child: CircularProgressIndicator())
+        ? Center(child: CircularProgressIndicator())
         : !signed
         ? loginView()
         : section == 1
@@ -403,22 +446,22 @@ class _FamilyHomeState extends State<FamilyHome> {
         : RefreshIndicator(
             onRefresh: refresh,
             child: ListView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               children: [
-                if (busy) const LinearProgressIndicator(),
+                if (busy) LinearProgressIndicator(),
                 if (error.isNotEmpty)
-                  Text(error, style: const TextStyle(color: Colors.red)),
+                  Text(error, style: TextStyle(color: Colors.red)),
                 if (children.isEmpty && !busy)
                   panel([
-                    const Text('No paired child phones yet'),
-                    const SizedBox(height: 8),
-                    const Text(
+                    Text('No paired child phones yet'),
+                    SizedBox(height: 8),
+                    Text(
                       'Pair each child phone with this account and start tracking.',
                       style: TextStyle(color: muted),
                     ),
                   ]),
                 for (final child in children) childCard(child),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(12),
                   child: Text(
                     'Reports refresh while open. Push notifications are not connected yet. This app does not call emergency services.',
@@ -435,32 +478,28 @@ class _FamilyHomeState extends State<FamilyHome> {
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: b.maxHeight),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24),
             child: Column(
               children: [
-                const SizedBox(height: 40),
+                SizedBox(height: 40),
                 Container(
                   width: 64,
                   height: 64,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
+                    gradient: LinearGradient(
                       colors: [green, Color(0xff22c55e)],
                     ),
                     borderRadius: BorderRadius.circular(24),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(color: Color(0x4022c55e), blurRadius: 30),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.shield,
-                    color: Colors.white,
-                    size: 32,
-                  ),
+                  child: Icon(Icons.shield, color: Colors.white, size: 32),
                 ),
-                const SizedBox(height: 18),
-                pill('CHILD SAFETY PARENT', color: const Color(0xff34d399)),
-                const SizedBox(height: 12),
-                const Text(
+                SizedBox(height: 18),
+                pill('CHILD SAFETY PARENT', color: Color(0xff34d399)),
+                SizedBox(height: 12),
+                Text(
                   'Parent Portal',
                   style: TextStyle(
                     color: Colors.white,
@@ -468,14 +507,14 @@ class _FamilyHomeState extends State<FamilyHome> {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 6),
-                const Text(
+                SizedBox(height: 6),
+                Text(
                   'Your family monitoring companion',
                   style: TextStyle(color: Color(0xff94a3b8), fontSize: 12),
                 ),
-                const SizedBox(height: 56),
+                SizedBox(height: 56),
                 darkField('EMAIL FIELD', email, Icons.email_outlined),
-                const SizedBox(height: 18),
+                SizedBox(height: 18),
                 darkField(
                   'PASSWORD FIELD',
                   password,
@@ -487,16 +526,16 @@ class _FamilyHomeState extends State<FamilyHome> {
                     Checkbox(
                       value: remember,
                       onChanged: (v) => setState(() => remember = v!),
-                      side: const BorderSide(color: muted),
+                      side: BorderSide(color: muted),
                     ),
-                    const Text(
+                    Text(
                       'Remember 30 days',
                       style: TextStyle(color: Color(0xff94a3b8), fontSize: 11),
                     ),
-                    const Spacer(),
+                    Spacer(),
                     TextButton(
                       onPressed: resetPassword,
-                      child: const Text(
+                      child: Text(
                         'Forgot password?',
                         style: TextStyle(
                           color: Color(0xff34d399),
@@ -513,10 +552,10 @@ class _FamilyHomeState extends State<FamilyHome> {
                     children: [
                       Text(
                         busy ? 'Signing in...' : 'Login',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.arrow_forward, size: 16),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward, size: 16),
                     ],
                   ),
                 ),
@@ -524,12 +563,12 @@ class _FamilyHomeState extends State<FamilyHome> {
                   data: Theme.of(context).copyWith(
                     textTheme: Theme.of(
                       context,
-                    ).textTheme.apply(bodyColor: const Color(0xff94a3b8)),
+                    ).textTheme.apply(bodyColor: Color(0xff94a3b8)),
                   ),
                   child: ExpansionTile(
                     iconColor: muted,
                     collapsedIconColor: muted,
-                    title: const Text(
+                    title: Text(
                       'Server configuration',
                       style: TextStyle(fontSize: 11, color: muted),
                     ),
@@ -539,7 +578,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                         server,
                         Icons.cloud_outlined,
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       darkField(
                         'FIREBASE PUBLIC APP KEY',
                         key,
@@ -549,9 +588,9 @@ class _FamilyHomeState extends State<FamilyHome> {
                   ),
                 ),
                 if (error.isNotEmpty)
-                  Text(error, style: const TextStyle(color: Colors.redAccent)),
-                const SizedBox(height: 40),
-                const Text(
+                  Text(error, style: TextStyle(color: Colors.redAccent)),
+                SizedBox(height: 40),
+                Text(
                   'Firebase sign-in • Password is not saved',
                   style: TextStyle(color: muted, fontSize: 11),
                 ),
@@ -572,27 +611,27 @@ class _FamilyHomeState extends State<FamilyHome> {
     children: [
       Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           color: Color(0xff94a3b8),
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: .5,
         ),
       ),
-      const SizedBox(height: 7),
+      SizedBox(height: 7),
       TextField(
         controller: controller,
         obscureText: secret,
         keyboardType: secret
             ? TextInputType.visiblePassword
             : TextInputType.text,
-        style: const TextStyle(color: Colors.white, fontSize: 13),
+        style: TextStyle(color: Colors.white, fontSize: 13),
         decoration: InputDecoration(
-          fillColor: const Color(0xff1e293b),
+          fillColor: Color(0xff1e293b),
           prefixIcon: Icon(icon, color: muted, size: 18),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xff334155)),
+            borderSide: BorderSide(color: Color(0xff334155)),
           ),
         ),
       ),
@@ -603,29 +642,27 @@ class _FamilyHomeState extends State<FamilyHome> {
       context: context,
       builder: (c) => StatefulBuilder(
         builder: (c, update) => AlertDialog(
-          contentPadding: const EdgeInsets.all(12),
+          contentPadding: EdgeInsets.all(12),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
               child: panel([
-                const Text(
+                Text(
                   'CHANGE PASSWORD',
                   style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
                 ),
-                const Divider(),
+                Divider(),
                 label('Old Password'),
                 TextField(
                   controller: oldPass,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                    hintText: 'Current password',
-                  ),
+                  decoration: InputDecoration(hintText: 'Current password'),
                 ),
                 label('New Password'),
                 TextField(
                   controller: newPass,
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'At least 8 characters',
                   ),
                 ),
@@ -633,11 +670,11 @@ class _FamilyHomeState extends State<FamilyHome> {
                 TextField(
                   controller: confirmPass,
                   obscureText: true,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Re-enter new password',
                   ),
                 ),
-                const SizedBox(height: 14),
+                SizedBox(height: 14),
                 FilledButton(
                   onPressed: busy
                       ? null
@@ -649,15 +686,12 @@ class _FamilyHomeState extends State<FamilyHome> {
                   child: Text(busy ? 'Updating...' : 'Update Password'),
                 ),
                 if (error.isNotEmpty)
-                  Text(error, style: const TextStyle(color: Colors.red)),
+                  Text(error, style: TextStyle(color: Colors.red)),
               ]),
             ),
           ),
           actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(c),
-              child: const Text('Close'),
-            ),
+            TextButton(onPressed: () => Navigator.pop(c), child: Text('Close')),
           ],
         ),
       ),
@@ -668,7 +702,7 @@ class _FamilyHomeState extends State<FamilyHome> {
   }
 
   Widget settingsView() => ListView(
-    padding: const EdgeInsets.all(16),
+    padding: EdgeInsets.all(16),
     children: [
       panel([
         Row(
@@ -677,12 +711,12 @@ class _FamilyHomeState extends State<FamilyHome> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: const Color(0xffdcfce7),
+                color: Color(0xffdcfce7),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.person, color: green),
+              child: Icon(Icons.person, color: green),
             ),
-            const SizedBox(width: 14),
+            SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -691,9 +725,9 @@ class _FamilyHomeState extends State<FamilyHome> {
                     FamilyApi.email.isEmpty
                         ? 'Parent account'
                         : FamilyApi.email,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    style: TextStyle(fontWeight: FontWeight.w800),
                   ),
-                  const Text(
+                  Text(
                     'Firebase Authentication',
                     style: TextStyle(fontSize: 11, color: muted),
                   ),
@@ -703,27 +737,38 @@ class _FamilyHomeState extends State<FamilyHome> {
           ],
         ),
       ]),
-      const SizedBox(height: 16),
+      SizedBox(height: 16),
       panel([
-        const Text(
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            "Dark mode",
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text("Saved on this phone"),
+          secondary: Icon(Icons.dark_mode_outlined, color: green),
+          value: ParentTheme.dark.value,
+          onChanged: (v) => ParentTheme.set(v),
+        ),
+      ]),
+      SizedBox(height: 16),
+      panel([
+        Text(
           'PUSH ALERTS',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 8),
-        Text(
-          ParentPush.status,
-          style: const TextStyle(fontSize: 11, color: muted),
-        ),
-        const SizedBox(height: 12),
+        SizedBox(height: 8),
+        Text(ParentPush.status, style: TextStyle(fontSize: 11, color: muted)),
+        SizedBox(height: 12),
         FilledButton.icon(
           onPressed: () async {
             await ParentPush.enable();
             if (mounted) setState(() {});
           },
-          icon: const Icon(Icons.notifications_outlined, size: 16),
-          label: const Text('Enable notifications'),
+          icon: Icon(Icons.notifications_outlined, size: 16),
+          label: Text('Enable notifications'),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         TextButton(
           onPressed: () async {
             try {
@@ -736,37 +781,35 @@ class _FamilyHomeState extends State<FamilyHome> {
                 );
             }
           },
-          child: const Text('Disable notifications'),
+          child: Text('Disable notifications'),
         ),
-        const Text(
+        Text(
           'SOS, zone crossings, low battery and speed. Delivery depends on network, Android permissions and server availability.',
           style: TextStyle(fontSize: 10, color: muted),
         ),
       ]),
-      const SizedBox(height: 16),
+      SizedBox(height: 16),
       panel([
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.lock_outline, color: green),
-          title: const Text(
+          leading: Icon(Icons.lock_outline, color: green),
+          title: Text(
             'Change Password',
             style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
           ),
-          trailing: const Icon(Icons.chevron_right),
+          trailing: Icon(Icons.chevron_right),
           onTap: passwordDialog,
         ),
       ]),
-      const SizedBox(height: 16),
+      SizedBox(height: 16),
       panel([
-        const Text(
+        Text(
           'SESSION',
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
         ),
-        const Divider(),
+        Divider(),
         FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xffdc2626),
-          ),
+          style: FilledButton.styleFrom(backgroundColor: Color(0xffdc2626)),
           onPressed: () async {
             timer?.cancel();
             try {
@@ -787,8 +830,8 @@ class _FamilyHomeState extends State<FamilyHome> {
                 section = 0;
               });
           },
-          icon: const Icon(Icons.logout, size: 16),
-          label: const Text('Logout'),
+          icon: Icon(Icons.logout, size: 16),
+          label: Text('Logout'),
         ),
       ]),
     ],
@@ -802,12 +845,16 @@ class _FamilyHomeState extends State<FamilyHome> {
     final sos = latest?['emergency'] == true;
     Widget stat(String a, String b, {bool accent = false}) => Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
-        margin: const EdgeInsets.symmetric(horizontal: 3),
+        padding: EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+        margin: EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
-          color: accent ? const Color(0xfff0fdf4) : const Color(0xfff8fafc),
+          color: accent
+              ? Color(0xfff0fdf4)
+              : ParentTheme.dark.value
+              ? Color(0xff1e293b)
+              : Color(0xfff8fafc),
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: accent ? const Color(0xffdcfce7) : pale),
+          border: Border.all(color: accent ? Color(0xffdcfce7) : pale),
         ),
         child: Column(
           children: [
@@ -815,11 +862,11 @@ class _FamilyHomeState extends State<FamilyHome> {
               a,
               style: TextStyle(
                 fontSize: 9,
-                color: accent ? green : const Color(0xff94a3b8),
+                color: accent ? green : Color(0xff94a3b8),
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(height: 3),
+            SizedBox(height: 3),
             Text(
               b,
               style: TextStyle(
@@ -833,7 +880,7 @@ class _FamilyHomeState extends State<FamilyHome> {
       ),
     );
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.only(bottom: 16),
       child: InkWell(
         borderRadius: BorderRadius.circular(24),
         onTap: () async {
@@ -858,14 +905,14 @@ class _FamilyHomeState extends State<FamilyHome> {
                     alignment: Alignment.center,
                     child: Text(
                       name.isEmpty ? '?' : name[0].toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: surface,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -876,7 +923,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                           children: [
                             Text(
                               name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -887,19 +934,19 @@ class _FamilyHomeState extends State<FamilyHome> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 3),
+                        SizedBox(height: 3),
                         Text(
                           'Android • ${child['deviceId']}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11, color: muted),
+                          style: TextStyle(fontSize: 11, color: muted),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 13),
+              SizedBox(height: 13),
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: SizedBox(
@@ -909,7 +956,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                       if (p != null)
                         MiniMap(points: [p], fresh: live)
                       else
-                        const Center(
+                        Center(
                           child: Text(
                             'Location unavailable',
                             style: TextStyle(color: muted),
@@ -919,7 +966,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                         left: 8,
                         bottom: 8,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
+                          padding: EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
                           ),
@@ -929,10 +976,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                           ),
                           child: Text(
                             '${latest?['city'] ?? 'Unknown location'}${latest?['accuracy'] != null ? ' • ±${latest!['accuracy']}m' : ''}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                            ),
+                            style: TextStyle(color: surface, fontSize: 9),
                           ),
                         ),
                       ),
@@ -940,7 +984,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Row(
                 children: [
                   stat('BATTERY', '${latest?['battery'] ?? '--'}%'),
@@ -952,14 +996,16 @@ class _FamilyHomeState extends State<FamilyHome> {
                   ),
                 ],
               ),
-              const SizedBox(height: 9),
+              SizedBox(height: 9),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(9),
+                padding: EdgeInsets.all(9),
                 decoration: BoxDecoration(
                   color: events.isEmpty
-                      ? const Color(0xfff8fafc)
-                      : const Color(0xfffffbeb),
+                      ? ParentTheme.dark.value
+                            ? Color(0xff1e293b)
+                            : Color(0xfff8fafc)
+                      : Color(0xfffffbeb),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -968,7 +1014,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                       : 'Zone Alert: ${events.first['entered'] == true ? 'Entered' : 'Left'} ${events.first['zoneName']} • ${stamp(events.first['fixAt'])}',
                   style: TextStyle(
                     fontSize: 10,
-                    color: events.isEmpty ? muted : const Color(0xff92400e),
+                    color: events.isEmpty ? muted : Color(0xff92400e),
                   ),
                 ),
               ),
@@ -978,21 +1024,18 @@ class _FamilyHomeState extends State<FamilyHome> {
                 right: 0,
                 top: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 5,
-                  ),
-                  decoration: const BoxDecoration(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
                     color: Color(0xffef4444),
                     borderRadius: BorderRadius.only(
                       topRight: Radius.circular(24),
                       bottomLeft: Radius.circular(12),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'SOS ACTIVE',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: surface,
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1010,7 +1053,7 @@ class MiniMap extends StatelessWidget {
   final List<LatLng> points;
   final List<dynamic> zones;
   final bool fresh;
-  const MiniMap({
+  MiniMap({
     super.key,
     required this.points,
     this.fresh = false,
@@ -1019,7 +1062,7 @@ class MiniMap extends StatelessWidget {
   @override
   Widget build(BuildContext context) => FlutterMap(
     options: MapOptions(
-      initialCenter: points.isEmpty ? const LatLng(20.59, 78.96) : points.last,
+      initialCenter: points.isEmpty ? LatLng(20.59, 78.96) : points.last,
       initialZoom: points.isEmpty ? 4 : 14,
     ),
     children: [
@@ -1062,14 +1105,14 @@ class MiniMap extends StatelessWidget {
             ),
           ],
         ),
-      const SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
+      SimpleAttributionWidget(source: Text('OpenStreetMap contributors')),
     ],
   );
 }
 
 class ChildDetail extends StatefulWidget {
   final Map<String, dynamic> child;
-  const ChildDetail({super.key, required this.child});
+  ChildDetail({super.key, required this.child});
   @override
   State<ChildDetail> createState() => _ChildDetailState();
 }
@@ -1133,7 +1176,7 @@ class _ChildDetailState extends State<ChildDetail> {
       if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Alert settings saved.')));
+        ).showSnackBar(SnackBar(content: Text('Alert settings saved.')));
     } catch (_) {
       if (mounted) setState(() => error = 'Could not save alert settings.');
     }
@@ -1148,7 +1191,7 @@ class _ChildDetailState extends State<ChildDetail> {
       );
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text('Saved. Applies on the next successful report.'),
           ),
         );
@@ -1157,27 +1200,32 @@ class _ChildDetailState extends State<ChildDetail> {
     }
   }
 
-  Future<void> addZone() async {
-    final name = TextEditingController();
-    final radius = TextEditingController(text: '300');
-    LatLng? selected = point(widget.child['latest']);
+  Future<void> addZone([dynamic existing]) async {
+    final name = TextEditingController(text: existing?['name'] ?? '');
+    final radius = TextEditingController(text: '${existing?['radius'] ?? 300}');
+    LatLng? selected = existing == null
+        ? point(widget.child['latest'])
+        : LatLng(
+            (existing['latitude'] as num).toDouble(),
+            (existing['longitude'] as num).toDouble(),
+          );
     final ok = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialog) => AlertDialog(
-          title: const Text('Add safe zone'),
+          title: Text(existing == null ? 'Add safe zone' : 'Edit safe zone'),
           content: SizedBox(
             width: 400,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Tap the map to choose the centre.'),
+                  Text('Tap the map to choose the centre.'),
                   SizedBox(
                     height: 200,
                     child: FlutterMap(
                       options: MapOptions(
-                        initialCenter: selected ?? const LatLng(20.59, 78.96),
+                        initialCenter: selected ?? LatLng(20.59, 78.96),
                         initialZoom: selected == null ? 4 : 14,
                         onTap: (_, p) => setDialog(() => selected = p),
                       ),
@@ -1192,14 +1240,11 @@ class _ChildDetailState extends State<ChildDetail> {
                             markers: [
                               Marker(
                                 point: selected!,
-                                child: const Icon(
-                                  Icons.location_on,
-                                  color: green,
-                                ),
+                                child: Icon(Icons.location_on, color: green),
                               ),
                             ],
                           ),
-                        const SimpleAttributionWidget(
+                        SimpleAttributionWidget(
                           source: Text(
                             'OpenStreetMap contributors',
                             style: TextStyle(fontSize: 8),
@@ -1211,12 +1256,12 @@ class _ChildDetailState extends State<ChildDetail> {
                   TextField(
                     controller: name,
                     maxLength: 60,
-                    decoration: const InputDecoration(labelText: 'Zone name'),
+                    decoration: InputDecoration(labelText: 'Zone name'),
                   ),
                   TextField(
                     controller: radius,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Radius: 100-10,000 metres',
                     ),
                   ),
@@ -1227,11 +1272,11 @@ class _ChildDetailState extends State<ChildDetail> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text('Cancel'),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Save'),
+              child: Text('Save'),
             ),
           ],
         ),
@@ -1251,8 +1296,10 @@ class _ChildDetailState extends State<ChildDetail> {
       } else {
         try {
           await FamilyApi.request(
-            '/api/zones/$id',
-            method: 'POST',
+            existing == null
+                ? '/api/zones/$id'
+                : '/api/zones/$id/${existing['id']}',
+            method: existing == null ? 'POST' : 'PUT',
             data: {
               'name': name.text.trim(),
               'latitude': selected!.latitude,
@@ -1264,7 +1311,8 @@ class _ChildDetailState extends State<ChildDetail> {
         } catch (_) {
           if (mounted)
             setState(
-              () => error = 'Could not add zone. Limit: 10 zones per device.',
+              () => error =
+                  'Could not save zone. Check connection and zone details.',
             );
         }
       }
@@ -1278,15 +1326,15 @@ class _ChildDetailState extends State<ChildDetail> {
       context: context,
       builder: (c) => AlertDialog(
         title: Text('Delete ${z['name']}?'),
-        content: const Text('This also removes its enter/exit alerts.'),
+        content: Text('This also removes its enter/exit alerts.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c, false),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(c, true),
-            child: const Text('Delete'),
+            child: Text('Delete'),
           ),
         ],
       ),
@@ -1311,7 +1359,7 @@ class _ChildDetailState extends State<ChildDetail> {
       playing = true;
       playIndex = 0;
     });
-    playback = Timer.periodic(const Duration(milliseconds: 700), (_) {
+    playback = Timer.periodic(Duration(milliseconds: 700), (_) {
       if (!mounted) return;
       if (playIndex >= count - 1) {
         playback?.cancel();
@@ -1349,10 +1397,7 @@ class _ChildDetailState extends State<ChildDetail> {
             children: [
               Text(
                 "$name's Dashboard",
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               Text(
                 live ? 'Recent GPS fix' : 'Last known location',
@@ -1366,27 +1411,24 @@ class _ChildDetailState extends State<ChildDetail> {
             labelColor: green,
             unselectedLabelColor: muted,
             indicatorColor: green,
-            labelStyle: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
+            labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             tabs: [
-              const Tab(text: 'Big Map & History'),
+              Tab(text: 'Big Map & History'),
               Tab(text: 'Safe Zones (${safe.length})'),
-              const Tab(text: 'SOS Alerts'),
-              const Tab(text: 'Sync Interval'),
-              const Tab(text: 'Phone Activity'),
+              Tab(text: 'SOS Alerts'),
+              Tab(text: 'Sync Interval'),
+              Tab(text: 'Phone Activity'),
             ],
           ),
         ),
         body: busy
-            ? const Center(child: CircularProgressIndicator())
+            ? Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
                   Column(
                     children: [
                       if (error.isNotEmpty)
-                        Text(error, style: const TextStyle(color: Colors.red)),
+                        Text(error, style: TextStyle(color: Colors.red)),
                       Expanded(
                         child: Stack(
                           children: [
@@ -1403,27 +1445,27 @@ class _ChildDetailState extends State<ChildDetail> {
                               child: Column(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.all(8),
+                                    padding: EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       color: ink.withValues(alpha: .8),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
                                       '$name • ${playing ? 'Recorded route' : latest?['city'] ?? 'Location unavailable'}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: surface,
                                         fontSize: 11,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  SizedBox(height: 8),
                                   Row(
                                     children: [
                                       Expanded(
                                         child: Container(
-                                          padding: const EdgeInsets.all(8),
+                                          padding: EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: Colors.white,
+                                            color: surface,
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
@@ -1432,17 +1474,17 @@ class _ChildDetailState extends State<ChildDetail> {
                                             playing
                                                 ? 'Historical GPS • gaps may be missing'
                                                 : '${safe.length} safe zones • ${latest?['accuracy'] != null ? 'GPS ±${latest!['accuracy']}m' : 'GPS accuracy unavailable'}',
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 10,
                                               color: muted,
                                             ),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      SizedBox(width: 8),
                                       FilledButton.icon(
                                         style: FilledButton.styleFrom(
-                                          minimumSize: const Size(0, 38),
+                                          minimumSize: Size(0, 38),
                                         ),
                                         onPressed: pts.isEmpty
                                             ? null
@@ -1457,7 +1499,7 @@ class _ChildDetailState extends State<ChildDetail> {
                                           playing
                                               ? 'Stop'
                                               : 'Play Route History',
-                                          style: const TextStyle(fontSize: 10),
+                                          style: TextStyle(fontSize: 10),
                                         ),
                                       ),
                                     ],
@@ -1469,11 +1511,11 @@ class _ChildDetailState extends State<ChildDetail> {
                         ),
                       ),
                       Container(
-                        color: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        color: surface,
+                        padding: EdgeInsets.symmetric(horizontal: 12),
                         child: Row(
                           children: [
-                            const Text(
+                            Text(
                               'Timeline:',
                               style: TextStyle(fontSize: 10, color: muted),
                             ),
@@ -1507,7 +1549,7 @@ class _ChildDetailState extends State<ChildDetail> {
                                         )]['fixAt'],
                                       ).toLocal(),
                                     ),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -1518,11 +1560,11 @@ class _ChildDetailState extends State<ChildDetail> {
                     ],
                   ),
                   ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     children: [
                       Row(
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -1542,44 +1584,44 @@ class _ChildDetailState extends State<ChildDetail> {
                           ),
                           FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              minimumSize: const Size(0, 36),
+                              minimumSize: Size(0, 36),
                             ),
                             onPressed: addZone,
-                            icon: const Icon(Icons.add, size: 14),
-                            label: const Text(
+                            icon: Icon(Icons.add, size: 14),
+                            label: Text(
                               'Add Zone',
                               style: TextStyle(fontSize: 11),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       if (safe.isEmpty)
                         panel([
-                          const Text(
+                          Text(
                             'No safe zones yet',
                             style: TextStyle(color: muted),
                           ),
                         ]),
                       for (final z in safe)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.only(bottom: 12),
                           child: panel([
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xffecfdf5),
+                                    color: Color(0xffecfdf5),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Icon(
+                                  child: Icon(
                                     Icons.home_outlined,
                                     color: green,
                                     size: 20,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -1587,14 +1629,14 @@ class _ChildDetailState extends State<ChildDetail> {
                                     children: [
                                       Text(
                                         z['name'],
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 12,
                                         ),
                                       ),
                                       Text(
                                         'Radius: ${z['radius']}m',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 10,
                                           color: muted,
                                         ),
@@ -1610,8 +1652,13 @@ class _ChildDetailState extends State<ChildDetail> {
                                       : 'Outside',
                                 ),
                                 IconButton(
+                                  tooltip: 'Edit safe zone',
+                                  icon: Icon(Icons.edit_outlined, color: green),
+                                  onPressed: () => addZone(z),
+                                ),
+                                IconButton(
                                   onPressed: () => deleteZone(z),
-                                  icon: const Icon(
+                                  icon: Icon(
                                     Icons.delete_outline,
                                     size: 18,
                                     color: muted,
@@ -1621,8 +1668,8 @@ class _ChildDetailState extends State<ChildDetail> {
                             ),
                           ]),
                         ),
-                      const SizedBox(height: 12),
-                      const Text(
+                      SizedBox(height: 12),
+                      Text(
                         'Recent zone alerts',
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
@@ -1630,51 +1677,51 @@ class _ChildDetailState extends State<ChildDetail> {
                         ListTile(
                           title: Text(
                             '${e['entered'] == true ? 'Entered' : 'Left'} ${e['zoneName']}',
-                            style: const TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 12),
                           ),
                           subtitle: Text(
                             stamp(e['fixAt']),
-                            style: const TextStyle(fontSize: 10),
+                            style: TextStyle(fontSize: 10),
                           ),
                         ),
                     ],
                   ),
                   ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     children: [
-                      const Text(
+                      Text(
                         'EMERGENCY SOS HISTORY',
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       if (sos.isEmpty)
                         panel([
-                          const Text(
+                          Text(
                             'No SOS reports received',
                             style: TextStyle(color: muted),
                           ),
                         ]),
                       for (final h in sos)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
+                          padding: EdgeInsets.only(bottom: 12),
                           child: panel([
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.warning_amber_rounded,
                                   color: Colors.red,
                                 ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'SOS Button Pressed',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
@@ -1683,15 +1730,15 @@ class _ChildDetailState extends State<ChildDetail> {
                                       ),
                                       Text(
                                         stamp(h['receivedAt']),
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 10,
                                           color: muted,
                                         ),
                                       ),
-                                      const SizedBox(height: 6),
+                                      SizedBox(height: 6),
                                       Text(
                                         '$name reported an emergency from ${h['city'] ?? 'an unknown location'}.',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 11,
                                           color: muted,
                                         ),
@@ -1703,28 +1750,28 @@ class _ChildDetailState extends State<ChildDetail> {
                             ),
                           ]),
                         ),
-                      const Text(
+                      Text(
                         'Recorded device alerts. No emergency calls or acknowledgement workflow.',
                         style: TextStyle(fontSize: 10, color: muted),
                       ),
                     ],
                   ),
                   ListView(
-                    padding: const EdgeInsets.all(16),
+                    padding: EdgeInsets.all(16),
                     children: [
                       panel([
-                        const Text(
+                        Text(
                           'BACKGROUND REPORTING FREQUENCY',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const Divider(),
+                        Divider(),
                         label('Select Report Interval'),
                         DropdownButtonFormField<int>(
                           initialValue: interval,
-                          items: const [
+                          items: [
                             DropdownMenuItem(
                               value: 30,
                               child: Text('Every 30 seconds'),
@@ -1756,30 +1803,27 @@ class _ChildDetailState extends State<ChildDetail> {
                           ],
                           onChanged: (v) => setState(() => interval = v!),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         Text(
                           "Controls how often $name's phone sends reports. Applies on its next successful report.",
-                          style: const TextStyle(fontSize: 11, color: muted),
+                          style: TextStyle(fontSize: 11, color: muted),
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16),
                         FilledButton(
                           onPressed: saveInterval,
-                          child: const Text('Save Interval Setting'),
+                          child: Text('Save Interval Setting'),
                         ),
-                        const SizedBox(height: 12),
-                        const Text(
+                        SizedBox(height: 12),
+                        Text(
                           'Long intervals can miss short zone visits. GPS may remain active, so battery savings are not guaranteed.',
                           style: TextStyle(fontSize: 10, color: muted),
                         ),
                         if (error.isNotEmpty)
-                          Text(
-                            error,
-                            style: const TextStyle(color: Colors.red),
-                          ),
+                          Text(error, style: TextStyle(color: Colors.red)),
                       ]),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       panel([
-                        const Text(
+                        Text(
                           'SAFETY ALERTS',
                           style: TextStyle(
                             fontSize: 12,
@@ -1789,7 +1833,7 @@ class _ChildDetailState extends State<ChildDetail> {
                         label('Low battery threshold'),
                         DropdownButtonFormField<int>(
                           initialValue: batteryThreshold,
-                          items: const [
+                          items: [
                             DropdownMenuItem(value: 0, child: Text('Off')),
                             DropdownMenuItem(value: 10, child: Text('10%')),
                             DropdownMenuItem(value: 15, child: Text('15%')),
@@ -1802,11 +1846,11 @@ class _ChildDetailState extends State<ChildDetail> {
                         label('Speed alert'),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text(
+                          title: Text(
                             'Enable speed alert',
                             style: TextStyle(fontSize: 12),
                           ),
-                          subtitle: const Text(
+                          subtitle: Text(
                             'Off by default',
                             style: TextStyle(fontSize: 10),
                           ),
@@ -1828,27 +1872,27 @@ class _ChildDetailState extends State<ChildDetail> {
                               ),
                             ],
                           ),
-                        const Text(
+                        Text(
                           'Requires two fresh accurate speed reports. GPS speed is an estimate, not a safety guarantee.',
                           style: TextStyle(fontSize: 10, color: muted),
                         ),
-                        const SizedBox(height: 12),
+                        SizedBox(height: 12),
                         FilledButton(
                           onPressed: saveAlerts,
-                          child: const Text('Save Alert Settings'),
+                          child: Text('Save Alert Settings'),
                         ),
                       ]),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16),
                       panel([
-                        const Text(
+                        Text(
                           'OFFLINE REPORTS',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
+                        SizedBox(height: 8),
+                        Text(
                           'Updated child app stores up to 2,880 encrypted reports while offline, then uploads them in order when the connection returns. Original GPS times stay unchanged. Old reports are not live location; tracking stops if Android force-stops the app.',
                           style: TextStyle(fontSize: 11, color: muted),
                         ),
@@ -1862,4 +1906,3 @@ class _ChildDetailState extends State<ChildDetail> {
     );
   }
 }
-
