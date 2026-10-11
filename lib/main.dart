@@ -1227,36 +1227,39 @@ class _ChildDetailState extends State<ChildDetail> {
                   SizedBox(height: 12),
                   SizedBox(
                     height: 200,
-                    child: FlutterMap(
-                      options: MapOptions(
-                        initialCenter: selected ?? LatLng(20.59, 78.96),
-                        initialZoom: selected == null ? 4 : 14,
-                        onTap: (_, p) => setDialog(() => selected = p),
+                    child: ClipRect(
+                      child: FlutterMap(
+                        options: MapOptions(
+                          initialCenter: selected ?? LatLng(20.59, 78.96),
+                          initialZoom: selected == null ? 4 : 14,
+                          onTap: (_, p) => setDialog(() => selected = p),
+                        ),
+                        children: [
+                          TileLayer(
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.childsafety.parent',
+                          ),
+                          if (selected != null)
+                            MarkerLayer(
+                              markers: [
+                                Marker(
+                                  point: selected!,
+                                  child: Icon(Icons.location_on, color: green),
+                                ),
+                              ],
+                            ),
+                          SimpleAttributionWidget(
+                            source: Text(
+                              'OpenStreetMap contributors',
+                              style: TextStyle(fontSize: 8),
+                            ),
+                          ),
+                        ],
                       ),
-                      children: [
-                        TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.childsafety.parent',
-                        ),
-                        if (selected != null)
-                          MarkerLayer(
-                            markers: [
-                              Marker(
-                                point: selected!,
-                                child: Icon(Icons.location_on, color: green),
-                              ),
-                            ],
-                          ),
-                        SimpleAttributionWidget(
-                          source: Text(
-                            'OpenStreetMap contributors',
-                            style: TextStyle(fontSize: 8),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
+                  SizedBox(height: 20),
                   TextField(
                     controller: name,
                     maxLength: 60,
