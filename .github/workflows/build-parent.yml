@@ -1,0 +1,33 @@
+name: Build Child Safety Parent
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.6'
+          channel: stable
+      - name: Restore permanent signer
+        env:
+          CHILD_KEYSTORE_BASE64: ${{ secrets.CHILD_KEYSTORE_BASE64 }}
+          CHILD_KEYSTORE_PASSWORD: ${{ secrets.CHILD_KEYSTORE_PASSWORD }}
+          CHILD_KEY_ALIAS: ${{ secrets.CHILD_KEY_ALIAS }}
+          CHILD_KEY_PASSWORD: ${{ secrets.CHILD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$CHILD_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/child-release.jks"
+          printf '\nCHILD_KEYSTORE_FILE=%s\nCHILD_KEYSTORE_PASSWORD=%s\nCHILD_KEY_ALIAS=%s\nCHILD_KEY_PASSWORD=%s\n' "$RUNNER_TEMP/child-release.jks" "$CHILD_KEYSTORE_PASSWORD" "$CHILD_KEY_ALIAS" "$CHILD_KEY_PASSWORD" >> android/gradle.properties
+      - run: flutter pub get && flutter analyze --no-fatal-infos
+      - run: flutter build apk --release --target-platform android-arm64 --build-name=1.0.1 --build-number=1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: child-safety-parent-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
