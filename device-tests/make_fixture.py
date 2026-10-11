@@ -32,5 +32,5 @@ p=Path('lib/runtime_fixture.dart');v=p.read_text().replace("'zones':[{'id':1,'na
 
 # Notification-only fixture: no owner account, one baseline then a synthetic event.
 p=Path('lib/runtime_fixture.dart');v=p.read_text();v=v.replace("Future<void> refresh() async {}", "Future<void> refresh() async {}")
-v=v.replace("children=sampleChildren;}); }", "children=sampleChildren;}); await ZoneAlerts.enable(sampleChildren); await ZoneAlerts.consume(sampleChildren.first,[{'id':1,'entered':true,'zoneName':'Sample school','fixAt':'2026-10-12T04:50:00+05:30'}]); }")
+v=v.replace("children=sampleChildren;}); }", "children=sampleChildren;}); try {await ZoneAlerts.enable(sampleChildren); print('ZONE_ENABLED:'+ZoneAlerts.status); await ZoneAlerts.consume(sampleChildren.first,[{'id':1,'entered':true,'zoneName':'Sample school','fixAt':'2026-10-12T04:50:00+05:30'}]); print('ZONE_CONSUMED');}catch(e,stack){print('ZONE_FIXTURE_ERROR:$e $stack');} }")
 p.write_text(v)
