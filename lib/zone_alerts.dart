@@ -52,7 +52,7 @@ class ZoneAlerts {
     if (kIsWeb) return;
     await local.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+        android: AndroidInitializationSettings('ic_zone_alert'),
       ),
       onDidReceiveNotificationResponse: (r) => receive(r.payload),
     );

@@ -33,7 +33,11 @@ class ParentTheme {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ParentTheme.load();
-  await ZoneAlerts.initialize();
+  try {
+    await ZoneAlerts.initialize();
+  } catch (_) {
+    ZoneAlerts.status = 'Notifications need retry in Settings';
+  }
   runApp(ParentApp());
 }
 
