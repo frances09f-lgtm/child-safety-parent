@@ -6,11 +6,20 @@ class FamilyApi {
   static const storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
-  static String server = '', key = '', _token = '', _refresh = '';
+  static String server = '', key = '', email = '', _token = '', _refresh = '';
+  static bool _remember = true;
   static DateTime _expires = DateTime(2000);
   static Future<bool> restore() async {
     server = await storage.read(key: 'server') ?? '';
     key = await storage.read(key: 'key') ?? '';
+    email = await storage.read(key: 'email') ?? '';
+    final until = DateTime.tryParse(
+      await storage.read(key: 'rememberUntil') ?? '',
+    );
+    if (until == null || DateTime.now().isAfter(until)) {
+      await logout();
+      return false;
+    }
     _refresh = await storage.read(key: 'refresh') ?? '';
     if (_refresh.isEmpty) return false;
     try {
@@ -25,8 +34,9 @@ class FamilyApi {
     String endpoint,
     String firebase,
     String email,
-    String password,
-  ) async {
+    String password, {
+    bool remember = true,
+  }) async {
     final uri = Uri.parse(endpoint.trim());
     if (uri.scheme != 'https' ||
         uri.host.isEmpty ||
@@ -34,6 +44,8 @@ class FamilyApi {
         uri.query.isNotEmpty ||
         uri.fragment.isNotEmpty)
       throw Exception('Use an HTTPS server address.');
+    _remember = remember;
+    FamilyApi.email = email.trim();
     server = endpoint.trim().replaceAll(RegExp(r'/+$'), '');
     key = firebase.trim();
     final response = await http
@@ -61,7 +73,17 @@ class FamilyApi {
     _expires = DateTime.now().add(
       Duration(seconds: int.parse(data['expiresIn'].toString()) - 60),
     );
-    await storage.write(key: 'refresh', value: _refresh);
+    if (_remember) {
+      await storage.write(key: 'email', value: FamilyApi.email);
+      await storage.write(
+        key: 'rememberUntil',
+        value: DateTime.now().add(const Duration(days: 30)).toIso8601String(),
+      );
+      await storage.write(key: 'refresh', value: _refresh);
+    } else {
+      await storage.delete(key: 'refresh');
+      await storage.delete(key: 'rememberUntil');
+    }
     await storage.write(key: 'server', value: server);
     await storage.write(key: 'key', value: key);
   }
@@ -80,7 +102,7 @@ class FamilyApi {
     _expires = DateTime.now().add(
       Duration(seconds: int.parse(data['expires_in'].toString()) - 60),
     );
-    await storage.write(key: 'refresh', value: _refresh);
+    if (_remember) await storage.write(key: 'refresh', value: _refresh);
   }
 
   static Future<dynamic> request(
@@ -112,9 +134,71 @@ class FamilyApi {
     return jsonDecode(r.body);
   }
 
+  static Future<void> resetPassword(String address, String firebase) async {
+    if (address.trim().isEmpty || firebase.trim().isEmpty)
+      throw Exception(
+        'Enter your email and Firebase app key in Server configuration.',
+      );
+    final r = await http
+        .post(
+          Uri.https(
+            'identitytoolkit.googleapis.com',
+            '/v1/accounts:sendOobCode',
+            {'key': firebase.trim()},
+          ),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'requestType': 'PASSWORD_RESET',
+            'email': address.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+    if (r.statusCode != 200)
+      throw Exception(
+        'Could not request reset email. Check email and app configuration.',
+      );
+  }
+
+  static Future<void> changePassword(String current, String next) async {
+    final savedServer = server, savedKey = key, savedEmail = email;
+    final remembered = _remember;
+    await login(
+      savedServer,
+      savedKey,
+      savedEmail,
+      current,
+      remember: remembered,
+    );
+    final r = await http
+        .post(
+          Uri.https('identitytoolkit.googleapis.com', '/v1/accounts:update', {
+            'key': key,
+          }),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'idToken': _token,
+            'password': next,
+            'returnSecureToken': true,
+          }),
+        )
+        .timeout(const Duration(seconds: 30));
+    if (r.statusCode != 200)
+      throw Exception(
+        'Password was not changed. Check your current password and try again.',
+      );
+    final data = jsonDecode(r.body);
+    _token = data['idToken'];
+    _refresh = data['refreshToken'];
+    _expires = DateTime.now().add(
+      Duration(seconds: int.parse(data['expiresIn'].toString()) - 60),
+    );
+    if (_remember) await storage.write(key: 'refresh', value: _refresh);
+  }
+
   static Future<void> logout() async {
     await storage.deleteAll();
     _token = '';
     _refresh = '';
+    email = '';
   }
 }
