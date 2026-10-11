@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
 import 'api.dart';
 import 'push.dart';
+import 'activity.dart';
 
 const green = Color(0xff16a34a);
 const ink = Color(0xff0f172a);
@@ -1340,7 +1341,7 @@ class _ChildDetailState extends State<ChildDetail> {
     final live = fresh(latest);
     final name = widget.child['childName'] ?? 'Child';
     return DefaultTabController(
-      length: 4,
+      length: 5,
       child: Scaffold(
         appBar: AppBar(
           title: Column(
@@ -1374,6 +1375,7 @@ class _ChildDetailState extends State<ChildDetail> {
               Tab(text: 'Safe Zones (${safe.length})'),
               const Tab(text: 'SOS Alerts'),
               const Tab(text: 'Sync Interval'),
+              const Tab(text: 'Phone Activity'),
             ],
           ),
         ),
@@ -1853,9 +1855,11 @@ class _ChildDetailState extends State<ChildDetail> {
                       ]),
                     ],
                   ),
+                  ActivityTab(deviceId: widget.child['deviceId']),
                 ],
               ),
       ),
     );
   }
 }
+
