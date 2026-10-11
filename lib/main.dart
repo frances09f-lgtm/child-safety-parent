@@ -642,52 +642,52 @@ class _FamilyHomeState extends State<FamilyHome> {
       context: context,
       builder: (c) => StatefulBuilder(
         builder: (c, update) => AlertDialog(
-          contentPadding: EdgeInsets.all(12),
+          title: Text('Change password'),
+          contentPadding: EdgeInsets.fromLTRB(24, 12, 24, 4),
           content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
-              child: panel([
-                Text(
-                  'CHANGE PASSWORD',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-                ),
-                Divider(),
-                label('Old Password'),
-                TextField(
-                  controller: oldPass,
-                  obscureText: true,
-                  decoration: InputDecoration(hintText: 'Current password'),
-                ),
-                label('New Password'),
-                TextField(
-                  controller: newPass,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: 'At least 8 characters',
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  label('Old Password'),
+                  TextField(
+                    controller: oldPass,
+                    obscureText: true,
+                    decoration: InputDecoration(hintText: 'Current password'),
                   ),
-                ),
-                label('Confirm New Password'),
-                TextField(
-                  controller: confirmPass,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: 'Re-enter new password',
+                  label('New Password'),
+                  TextField(
+                    controller: newPass,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      hintText: 'At least 8 characters',
+                    ),
                   ),
-                ),
-                SizedBox(height: 14),
-                FilledButton(
-                  onPressed: busy
-                      ? null
-                      : () async {
-                          update(() => busy = true);
-                          await changePassword();
-                          if (c.mounted) update(() => busy = false);
-                        },
-                  child: Text(busy ? 'Updating...' : 'Update Password'),
-                ),
-                if (error.isNotEmpty)
-                  Text(error, style: TextStyle(color: Colors.red)),
-              ]),
+                  label('Confirm New Password'),
+                  TextField(
+                    controller: confirmPass,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      hintText: 'Re-enter new password',
+                    ),
+                  ),
+                  SizedBox(height: 14),
+                  FilledButton(
+                    onPressed: busy
+                        ? null
+                        : () async {
+                            update(() => busy = true);
+                            await changePassword();
+                            if (c.mounted) update(() => busy = false);
+                          },
+                    child: Text(busy ? 'Updating...' : 'Update Password'),
+                  ),
+                  if (error.isNotEmpty)
+                    Text(error, style: TextStyle(color: Colors.red)),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -1005,7 +1005,9 @@ class _FamilyHomeState extends State<FamilyHome> {
                       ? ParentTheme.dark.value
                             ? Color(0xff1e293b)
                             : Color(0xfff8fafc)
-                      : (ParentTheme.dark.value ? Color(0xff3a2b18) : Color(0xfffffbeb)),
+                      : (ParentTheme.dark.value
+                            ? Color(0xff3a2b18)
+                            : Color(0xfffffbeb)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -1203,6 +1205,7 @@ class _ChildDetailState extends State<ChildDetail> {
   Future<void> addZone([dynamic existing]) async {
     final name = TextEditingController(text: existing?['name'] ?? '');
     final radius = TextEditingController(text: '${existing?['radius'] ?? 300}');
+    String? formError;
     LatLng? selected = existing == null
         ? point(widget.child['latest'])
         : LatLng(
@@ -1221,6 +1224,7 @@ class _ChildDetailState extends State<ChildDetail> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text('Tap the map to choose the centre.'),
+                  SizedBox(height: 12),
                   SizedBox(
                     height: 200,
                     child: FlutterMap(
@@ -1265,6 +1269,16 @@ class _ChildDetailState extends State<ChildDetail> {
                       labelText: 'Radius: 100-10,000 metres',
                     ),
                   ),
+                  if (formError != null)
+                    Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        formError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -1275,8 +1289,22 @@ class _ChildDetailState extends State<ChildDetail> {
               child: Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text('Save'),
+              onPressed: () {
+                final metres = int.tryParse(radius.text);
+                if (name.text.trim().isEmpty ||
+                    metres == null ||
+                    metres < 100 ||
+                    metres > 10000 ||
+                    selected == null) {
+                  setDialog(
+                    () => formError =
+                        'Choose a centre, a name, and radius from 100 to 10,000 metres.',
+                  );
+                  return;
+                }
+                Navigator.pop(context, true);
+              },
+              child: Text('Save zone'),
             ),
           ],
         ),
