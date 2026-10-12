@@ -238,7 +238,10 @@ class _FamilyHomeState extends State<FamilyHome> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => ChildDetail(child: matches.first, initialTab: 1),
+        builder: (_) => ChildDetail(
+          child: matches.first,
+          initialTab: ZoneAlerts.pendingTab,
+        ),
       ),
     );
   }
@@ -333,6 +336,9 @@ class _FamilyHomeState extends State<FamilyHome> {
           };
         }),
       );
+      try {
+        await ZoneAlerts.pollSpeed();
+      } catch (_) {}
       if (mounted)
         setState(() {
           children = data;
@@ -946,7 +952,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                 );
               return;
             }
-            await ZoneAlerts.disable();
+            await ZoneAlerts.disableAll();
             await FamilyApi.logout();
             if (mounted)
               setState(() {
@@ -1261,6 +1267,7 @@ class ChildDetail extends StatefulWidget {
 
 class _ChildDetailState extends State<ChildDetail> {
   List<dynamic> history = [];
+  List<dynamic> speedAlerts = [];
   String error = '';
   bool busy = true;
   int interval = 30;
@@ -1289,6 +1296,16 @@ class _ChildDetailState extends State<ChildDetail> {
     try {
       final h = await FamilyApi.request('/api/location/history/$id');
       final z = await FamilyApi.request('/api/zones/$id');
+      try {
+        final alerts = await FamilyApi.request('/api/alerts');
+        speedAlerts = (alerts['alerts'] as List? ?? [])
+            .where(
+              (a) =>
+                  a['deviceId'] == widget.child['deviceId'] &&
+                  a['type'] == 'speed',
+            )
+            .toList();
+      } catch (_) {}
       if (mounted)
         setState(() {
           history = h as List? ?? [];
@@ -1315,10 +1332,20 @@ class _ChildDetailState extends State<ChildDetail> {
           'speedLimitKph': speedLimit,
         },
       );
+      final ready = await ZoneAlerts.configureSpeed(
+        widget.child['deviceId'],
+        speedLimit,
+      );
       if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Alert settings saved.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              ready
+                  ? 'Alert settings saved. Speed notifications enabled when speed alert is on.'
+                  : 'Threshold saved, but Android notifications are blocked. Allow them in app Settings and save again.',
+            ),
+          ),
+        );
     } catch (_) {
       if (mounted) setState(() => error = 'Could not save alert settings.');
     }
@@ -2040,6 +2067,26 @@ class _ChildDetailState extends State<ChildDetail> {
                               setState(() => batteryThreshold = v!),
                         ),
                         label('Speed alert'),
+                        ...speedAlerts
+                            .take(5)
+                            .map(
+                              (a) => ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  a['title'] ?? 'Speed alert',
+                                  style: TextStyle(fontSize: 12),
+                                ),
+                                subtitle: Text(
+                                  '${a['body']}\nRecorded ${stamp(a['reportedAt'])}',
+                                  style: TextStyle(fontSize: 10),
+                                ),
+                              ),
+                            ),
+                        if (speedAlerts.isEmpty)
+                          Text(
+                            'No recorded speed alerts yet.',
+                            style: TextStyle(fontSize: 11, color: muted),
+                          ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
                           title: Text(
@@ -2069,7 +2116,7 @@ class _ChildDetailState extends State<ChildDetail> {
                             ],
                           ),
                         Text(
-                          'Requires two fresh accurate speed reports. GPS speed is an estimate, not a safety guarantee.',
+                          'Tap Save Alert Settings to apply. Requires two fresh accurate GPS speed reports. Open-app checks every 30 seconds; background checks 15 minutes or later. Not instant push. GPS is an estimate.',
                           style: TextStyle(fontSize: 10, color: muted),
                         ),
                         SizedBox(height: 12),

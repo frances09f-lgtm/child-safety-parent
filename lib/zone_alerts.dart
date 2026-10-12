@@ -12,19 +12,22 @@ void zoneDispatcher() {
   Workmanager().executeTask((task, input) async {
     WidgetsFlutterBinding.ensureInitialized();
     try {
-      if (!await ZoneAlerts.isEnabled() || !await FamilyApi.restore())
+      if ((!await ZoneAlerts.isEnabled() && !await ZoneAlerts.speedEnabled()) ||
+          !await FamilyApi.restore())
         return true;
       await ZoneAlerts.initializeLocal();
       final devices = await FamilyApi.request('/api/devices') as List;
-      for (final child in devices) {
-        final data = await FamilyApi.request(
-          '/api/zones/${Uri.encodeComponent(child['deviceId'])}',
-        );
-        await ZoneAlerts.consume(
-          Map<String, dynamic>.from(child),
-          (data?['events'] as List?) ?? [],
-        );
-      }
+      await ZoneAlerts.pollSpeed();
+      if (await ZoneAlerts.isEnabled())
+        for (final child in devices) {
+          final data = await FamilyApi.request(
+            '/api/zones/${Uri.encodeComponent(child['deviceId'])}',
+          );
+          await ZoneAlerts.consume(
+            Map<String, dynamic>.from(child),
+            (data?['events'] as List?) ?? [],
+          );
+        }
       await FamilyApi.storage.write(
         key: 'zoneLastCheck',
         value: DateTime.now().toUtc().toIso8601String(),
@@ -44,6 +47,9 @@ class ZoneAlerts {
   static bool workerReady = false;
   static String status = 'Off';
   static String? launchPayload;
+  static int pendingTab = 1;
+  static Future<bool> speedEnabled() async =>
+      await FamilyApi.storage.read(key: 'speedPollingEnabled') == 'true';
   static Future<void> queue = Future.value();
   static Future<bool> isEnabled() async =>
       await FamilyApi.storage.read(key: 'zoneAlertsEnabled') == 'true';
@@ -78,8 +84,11 @@ class ZoneAlerts {
     }
     try {
       final p = jsonDecode(payload ?? '{}');
-      if (p['kind'] == 'zone' && p['account'] == accountKey())
+      if ((p['kind'] == 'zone' || p['kind'] == 'speed') &&
+          p['account'] == accountKey()) {
+        pendingTab = p['kind'] == 'speed' ? 3 : 1;
         pendingDevice.value = p['device'] as String;
+      }
     } catch (_) {}
   }
 
@@ -108,7 +117,7 @@ class ZoneAlerts {
       launchPayload = null;
       receive(payload);
     }
-    if (!enabled || kIsWeb) return;
+    if ((!enabled && !await speedEnabled()) || kIsWeb) return;
     await initializeWorker();
     await Workmanager().registerPeriodicTask(
       job,
@@ -187,8 +196,116 @@ class ZoneAlerts {
     launchPayload = null;
     await FamilyApi.storage.write(key: 'zoneAlertsEnabled', value: 'false');
     if (!kIsWeb) {
-      await Workmanager().cancelByUniqueName(job);
+      if (!await speedEnabled()) await Workmanager().cancelByUniqueName(job);
       await local.cancelAll();
+    }
+  }
+
+  static Future<void> disableAll() async {
+    await FamilyApi.storage.write(key: 'speedPollingEnabled', value: 'false');
+    await disable();
+  }
+
+  static Future<bool> configureSpeed(String device, int limit) async {
+    final key = 'speedDevices:${accountKey()}';
+    final devices = Set<String>.from(
+      jsonDecode(await FamilyApi.storage.read(key: key) ?? '[]'),
+    );
+    if (limit <= 0) {
+      devices.remove(device);
+    } else {
+      await initializeLocal();
+      final android = local
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await android?.requestNotificationsPermission();
+      if (await android?.areNotificationsEnabled() != true) return false;
+      await pollSpeed(baseline: true);
+      devices.add(device);
+    }
+    await FamilyApi.storage.write(
+      key: key,
+      value: jsonEncode(devices.toList()),
+    );
+    await FamilyApi.storage.write(
+      key: 'speedPollingEnabled',
+      value: '${devices.isNotEmpty}',
+    );
+    if (devices.isNotEmpty)
+      await restoreSchedule();
+    else if (!enabled && !kIsWeb)
+      await Workmanager().cancelByUniqueName(job);
+    return true;
+  }
+
+  static Future<void> pollSpeed({bool baseline = false}) async {
+    if (kIsWeb || (!baseline && !await speedEnabled())) return;
+    final next = queue.then((_) => speedLocked(baseline));
+    queue = next.catchError((Object _) {});
+    return next;
+  }
+
+  static Future<void> speedLocked(bool baseline) async {
+    final config = await FamilyApi.request(
+      '/api/alerts',
+    ).timeout(const Duration(seconds: 20));
+    final events =
+        (config['alerts'] as List? ?? [])
+            .whereType<Map>()
+            .where((a) => a['type'] == 'speed' && a['id'] is num)
+            .toList()
+          ..sort((a, b) => (a['id'] as num).compareTo(b['id'] as num));
+    final directory = await getApplicationSupportDirectory();
+    final file = await File(
+      '${directory.path}/zone-alert.lock',
+    ).open(mode: FileMode.append);
+    await file.lock(FileLock.exclusive);
+    try {
+      final key = 'speedCursor:${accountKey()}';
+      final stored = await FamilyApi.storage.read(key: key);
+      final previous = int.tryParse(stored ?? '');
+      var latest = previous ?? 0;
+      final devices = Set<String>.from(
+        jsonDecode(
+          await FamilyApi.storage.read(key: 'speedDevices:${accountKey()}') ??
+              '[]',
+        ),
+      );
+      for (final a in events) {
+        final id = (a['id'] as num).toInt();
+        if (id <= latest) continue;
+        if (!baseline &&
+            previous != null &&
+            devices.contains(a['deviceId']) &&
+            await speedEnabled()) {
+          await local.show(
+            id: 1000000000 + id,
+            title: a['title']?.toString() ?? 'Speed alert',
+            body:
+                '${a['body'] ?? 'Recorded speed alert'} Recorded: ${a['reportedAt'] ?? 'unknown time'}.',
+            notificationDetails: const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'speed_alerts',
+                'Speed alerts',
+                importance: Importance.high,
+                priority: Priority.high,
+                visibility: NotificationVisibility.private,
+              ),
+            ),
+            payload: jsonEncode({
+              'kind': 'speed',
+              'account': accountKey(),
+              'device': a['deviceId'],
+            }),
+          );
+        }
+        latest = id;
+      }
+      await FamilyApi.storage.write(key: key, value: '$latest');
+    } finally {
+      await file.unlock();
+      await file.close();
     }
   }
 
