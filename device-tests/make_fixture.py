@@ -37,5 +37,5 @@ p.write_text(v)
 
 # Last-known map fixture: new report has no fix, original old fix stays separate.
 p=Path('lib/runtime_fixture.dart');v=p.read_text();v=v.replace("children=sampleChildren;});", "children=sampleChildren;});")
-v=v.replace("FamilyApi.email='fixture@example.invalid';setState", "sampleChildren.first['locationFix']=Map<String,dynamic>.from(sampleChildren.first['latest']);sampleChildren.first['locationFix']['fixAt']='2026-10-11T22:00:00+05:30';sampleChildren.first['latest']={...sampleChildren.first['latest'],'hasFix':false,'city':'Location unavailable'};FamilyApi.email='fixture@example.invalid';setState")
+v=v.replace("FamilyApi.email='fixture@example.invalid';setState", "sampleChildren.first['locationFix']=Map<String,dynamic>.from(sampleChildren.first['latest']);sampleChildren.first['locationFix']['fixAt']='2026-10-11T22:00:00+05:30';sampleChildren.first['latest']=<String,dynamic>{...sampleChildren.first['latest'],'hasFix':false,'city':'Location unavailable'};FamilyApi.email='fixture@example.invalid';setState")
 p.write_text(v)
