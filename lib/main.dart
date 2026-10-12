@@ -968,6 +968,56 @@ class _FamilyHomeState extends State<FamilyHome> {
       ]),
     ],
   );
+  Future<void> removeChild(Map<String, dynamic> child) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialog) => AlertDialog(
+        title: Text('Remove ${child['childName'] ?? 'child'}?'),
+        content: Text(
+          'Device: ${child['deviceId']}\n\nThis child will stop showing in your dashboard and new reports to this parent will stop. Stored history is kept. The child app is not wiped. Pair again with this parent to resume.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialog, false),
+            child: Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialog, true),
+            child: Text('Remove device'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      final result = await FamilyApi.request(
+        '/api/devices/${Uri.encodeComponent(child['deviceId'])}',
+        method: 'DELETE',
+      );
+      if (result['status'] != 'unlinked')
+        throw Exception('Server needs update');
+      await ZoneAlerts.configureSpeed(child['deviceId'], 0);
+      lastFixes.remove(Uri.encodeComponent(child['deviceId']));
+      if (mounted) {
+        setState(
+          () => children.removeWhere((c) => c['deviceId'] == child['deviceId']),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Device removed. Stored history kept.')),
+        );
+      }
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not confirm removal. Refresh and check the device before retrying.',
+            ),
+          ),
+        );
+    }
+  }
+
   Widget childCard(Map<String, dynamic> child) {
     final latest = child['latest'] as Map<String, dynamic>?;
     final location = child['locationFix'] as Map<String, dynamic>? ?? latest;
@@ -1115,6 +1165,14 @@ class _FamilyHomeState extends State<FamilyHome> {
                       ),
                     ],
                   ),
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => removeChild(child),
+                  icon: Icon(Icons.link_off, size: 16),
+                  label: Text('Remove device', style: TextStyle(fontSize: 11)),
                 ),
               ),
               SizedBox(height: 12),
