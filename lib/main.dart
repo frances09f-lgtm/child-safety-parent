@@ -990,6 +990,9 @@ class _FamilyHomeState extends State<FamilyHome> {
     );
     if (confirmed != true) return;
     try {
+      final capabilities = await FamilyApi.request('/api/devices/capabilities');
+      if (capabilities['historyPreservingUnlink'] != true)
+        throw Exception('Server needs safe unlink update');
       final result = await FamilyApi.request(
         '/api/devices/${Uri.encodeComponent(child['deviceId'])}',
         method: 'DELETE',
