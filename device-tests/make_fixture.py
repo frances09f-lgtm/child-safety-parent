@@ -34,3 +34,8 @@ p=Path('lib/runtime_fixture.dart');v=p.read_text().replace("'zones':[{'id':1,'na
 p=Path('lib/runtime_fixture.dart');v=p.read_text();v=v.replace("Future<void> refresh() async {}", "Future<void> refresh() async {}")
 v=v.replace("children=sampleChildren;}); }", "children=sampleChildren;}); try {await ZoneAlerts.enable(sampleChildren); print('ZONE_ENABLED:'+ZoneAlerts.status); await ZoneAlerts.consume(sampleChildren.first,[{'id':1,'entered':true,'zoneName':'Sample school','fixAt':'2026-10-12T04:50:00+05:30'}]); print('ZONE_CONSUMED');}catch(e,stack){print('ZONE_FIXTURE_ERROR:$e $stack');} }")
 p.write_text(v)
+
+# Last-known map fixture: new report has no fix, original old fix stays separate.
+p=Path('lib/runtime_fixture.dart');v=p.read_text();v=v.replace("children=sampleChildren;});", "children=sampleChildren;});")
+v=v.replace("FamilyApi.email='fixture@example.invalid';setState", "sampleChildren.first['locationFix']=Map<String,dynamic>.from(sampleChildren.first['latest']);sampleChildren.first['locationFix']['fixAt']='2026-10-11T22:00:00+05:30';sampleChildren.first['latest']={...sampleChildren.first['latest'],'hasFix':false,'city':'Location unavailable'};FamilyApi.email='fixture@example.invalid';setState")
+p.write_text(v)

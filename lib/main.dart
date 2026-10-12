@@ -216,6 +216,7 @@ class _FamilyHomeState extends State<FamilyHome> {
       newPass = TextEditingController(),
       confirmPass = TextEditingController();
   List<Map<String, dynamic>> children = [];
+  final lastFixes = <String, Map<String, dynamic>>{};
   Timer? timer;
   final email = TextEditingController(),
       password = TextEditingController(),
@@ -284,9 +285,52 @@ class _FamilyHomeState extends State<FamilyHome> {
           final d = Map<String, dynamic>.from(v);
           final id = Uri.encodeComponent(d['deviceId']);
           final latest = await FamilyApi.request('/api/location/latest/$id');
+          Map<String, dynamic>? locationFix;
+          if (latest is Map &&
+              point(Map<String, dynamic>.from(latest)) != null) {
+            locationFix = Map<String, dynamic>.from(latest);
+            lastFixes[id] = locationFix;
+          } else {
+            locationFix = lastFixes[id];
+            if (locationFix == null) {
+              try {
+                final history =
+                    await FamilyApi.request('/api/location/history/$id')
+                        as List? ??
+                    [];
+                final valid =
+                    history
+                        .whereType<Map>()
+                        .map((h) => Map<String, dynamic>.from(h))
+                        .where((h) => point(h) != null)
+                        .toList()
+                      ..sort(
+                        (a, b) =>
+                            (DateTime.tryParse(b['fixAt']?.toString() ?? '') ??
+                                    DateTime(1900))
+                                .compareTo(
+                                  DateTime.tryParse(
+                                        a['fixAt']?.toString() ?? '',
+                                      ) ??
+                                      DateTime(1900),
+                                ),
+                      );
+                if (valid.isNotEmpty) {
+                  locationFix = valid.first;
+                  lastFixes[id] = locationFix;
+                }
+              } catch (_) {}
+            }
+          }
+
           final zones = await FamilyApi.request('/api/zones/$id');
           await ZoneAlerts.consume(d, (zones?['events'] as List?) ?? []);
-          return {...d, 'latest': latest, 'zonesData': zones};
+          return {
+            ...d,
+            'latest': latest,
+            'locationFix': locationFix,
+            'zonesData': zones,
+          };
         }),
       );
       if (mounted)
@@ -908,6 +952,7 @@ class _FamilyHomeState extends State<FamilyHome> {
               setState(() {
                 signed = false;
                 children = [];
+                lastFixes.clear();
                 section = 0;
               });
           },
@@ -919,7 +964,8 @@ class _FamilyHomeState extends State<FamilyHome> {
   );
   Widget childCard(Map<String, dynamic> child) {
     final latest = child['latest'] as Map<String, dynamic>?;
-    final p = point(latest);
+    final location = child['locationFix'] as Map<String, dynamic>? ?? latest;
+    final p = point(location);
     final events = child['zonesData']?['events'] as List? ?? [];
     final live = fresh(latest) && error.isEmpty;
     final name = child['childName']?.toString() ?? 'Child';
@@ -1056,7 +1102,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${latest?['city'] ?? 'Unknown location'}${latest?['accuracy'] != null ? ' • ±${latest!['accuracy']}m' : ''}',
+                            '${location?['city'] ?? 'Unknown location'}${location?['accuracy'] != null ? ' • ±${location!['accuracy']}m' : ''}',
                             style: TextStyle(color: surface, fontSize: 9),
                           ),
                         ),
@@ -1066,13 +1112,25 @@ class _FamilyHomeState extends State<FamilyHome> {
                 ),
               ),
               SizedBox(height: 12),
+              if (p != null && !live)
+                Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Last GPS fix: ${stamp(location?['fixAt'])}. Not current location.',
+                    style: TextStyle(fontSize: 11, color: muted),
+                  ),
+                ),
               Row(
                 children: [
                   stat('BATTERY', '${latest?['battery'] ?? '--'}%'),
                   stat('LAST REPORT', ago(latest?['receivedAt'])),
                   stat(
                     'STATUS',
-                    live ? 'Live GPS' : 'Last known',
+                    live
+                        ? 'Live GPS'
+                        : p == null
+                        ? 'No GPS fix'
+                        : 'Last known',
                     accent: live,
                   ),
                 ],
@@ -1289,7 +1347,7 @@ class _ChildDetailState extends State<ChildDetail> {
     final radius = TextEditingController(text: '${existing?['radius'] ?? 300}');
     String? formError;
     LatLng? selected = existing == null
-        ? point(widget.child['latest'])
+        ? point(widget.child['locationFix'] ?? widget.child['latest'])
         : LatLng(
             (existing['latitude'] as num).toDouble(),
             (existing['longitude'] as num).toDouble(),
@@ -1490,7 +1548,27 @@ class _ChildDetailState extends State<ChildDetail> {
         .where((x) => point(x) != null)
         .toList();
     final latest = widget.child['latest'] as Map<String, dynamic>?;
-    final current = point(latest);
+    final validFixes =
+        history
+            .whereType<Map>()
+            .map((h) => Map<String, dynamic>.from(h))
+            .where((h) => point(h) != null)
+            .toList()
+          ..sort(
+            (a, b) =>
+                (DateTime.tryParse(b['fixAt']?.toString() ?? '') ??
+                        DateTime(1900))
+                    .compareTo(
+                      DateTime.tryParse(a['fixAt']?.toString() ?? '') ??
+                          DateTime(1900),
+                    ),
+          );
+    final location = point(latest) != null
+        ? latest
+        : (validFixes.isNotEmpty
+              ? validFixes.first
+              : widget.child['locationFix'] as Map<String, dynamic>?);
+    final current = point(location);
     final pts = ordered.map((x) => point(x)!).toList();
     final shown = playing && pts.isNotEmpty
         ? pts.take(playIndex + 1).toList()
@@ -1514,7 +1592,9 @@ class _ChildDetailState extends State<ChildDetail> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
               ),
               Text(
-                live ? 'Recent GPS fix' : 'Last known location',
+                live
+                    ? 'Recent GPS fix'
+                    : 'Last GPS fix: ${stamp(location?['fixAt'])}',
                 style: TextStyle(fontSize: 10, color: live ? green : muted),
               ),
             ],
@@ -1565,7 +1645,7 @@ class _ChildDetailState extends State<ChildDetail> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      '$name • ${playing ? 'Recorded route' : latest?['city'] ?? 'Location unavailable'}',
+                                      '$name • ${playing ? 'Recorded route' : location?['city'] ?? 'Location unavailable'}',
                                       style: TextStyle(
                                         color: surface,
                                         fontSize: 11,
