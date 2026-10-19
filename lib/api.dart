@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -122,7 +123,13 @@ class FamilyApi {
     } else if (method == 'PUT') {
       r = await http.put(uri, headers: headers, body: jsonEncode(data));
     } else if (method == 'DELETE') {
-      r = await http.delete(uri, headers: headers);
+      r = await http
+          .delete(
+            uri,
+            headers: headers,
+            body: data == null ? null : jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 30));
     } else {
       r = await http
           .get(uri, headers: headers)

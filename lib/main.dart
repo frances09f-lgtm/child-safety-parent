@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
 
 import 'api.dart';
+import 'detail_reports.dart';
 import 'push.dart';
 import 'zone_alerts.dart';
 import 'activity.dart';
@@ -167,9 +168,12 @@ Widget panel(List<Widget> children, {double radius = 18}) => Container(
       BoxShadow(color: Color(0x09000000), blurRadius: 3, offset: Offset(0, 2)),
     ],
   ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: children,
+  child: Material(
+    color: Colors.transparent,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: children,
+    ),
   ),
 );
 Widget label(String text) => Padding(
@@ -449,9 +453,8 @@ class _FamilyHomeState extends State<FamilyHome> {
       newPass.clear();
       confirmPass.clear();
       if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Password updated.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Password updated.')));
     } catch (e) {
       if (mounted)
         setState(() => error = e.toString().replaceFirst('Exception: ', ''));
@@ -638,9 +641,8 @@ class _FamilyHomeState extends State<FamilyHome> {
                 ),
                 Theme(
                   data: Theme.of(context).copyWith(
-                    textTheme: Theme.of(
-                      context,
-                    ).textTheme.apply(bodyColor: Color(0xff94a3b8)),
+                    textTheme: Theme.of(context).textTheme
+                        .apply(bodyColor: Color(0xff94a3b8)),
                   ),
                   child: ExpansionTile(
                     iconColor: muted,
@@ -941,19 +943,16 @@ class _FamilyHomeState extends State<FamilyHome> {
         FilledButton.icon(
           style: FilledButton.styleFrom(backgroundColor: Color(0xffdc2626)),
           onPressed: () async {
-            timer?.cancel();
             try {
               await ParentPush.disable();
+              await ZoneAlerts.disableAll();
+              await FamilyApi.logout();
             } catch (_) {
-              if (mounted)
-                setState(
-                  () => error =
-                      'Could not remove push registration. Try logout again when connected.',
-                );
+              if (mounted) setState(() => error =
+                'Could not finish logout. You are still signed in; automatic refresh remains on. Retry when connected.');
               return;
             }
-            await ZoneAlerts.disableAll();
-            await FamilyApi.logout();
+            timer?.cancel();
             if (mounted)
               setState(() {
                 signed = false;
@@ -1326,7 +1325,13 @@ class ChildDetail extends StatefulWidget {
   State<ChildDetail> createState() => _ChildDetailState();
 }
 
-class _ChildDetailState extends State<ChildDetail> {
+class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
+  Timer? refreshTimer;
+  Timer? freshnessTimer;
+  int generation = 0;
+  int activeLoads = 0;
+  Map<String, dynamic>? latestReport;
+  Map<String, dynamic>? lastFix;
   List<dynamic> history = [];
   List<dynamic> speedAlerts = [];
   String error = '';
@@ -1341,6 +1346,13 @@ class _ChildDetailState extends State<ChildDetail> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    latestReport = widget.child['latest'] as Map<String, dynamic>?;
+    lastFix = newestDeviceFix(widget.child['deviceId'], [
+      latestReport,
+      widget.child['locationFix'],
+    ]);
+    resumeRefresh();
     interval = widget.child['reportIntervalSeconds'] ?? 30;
     batteryThreshold = widget.child['lowBatteryThreshold'] ?? 0;
     speedLimit = widget.child['speedLimitKph'] ?? 0;
@@ -1349,37 +1361,106 @@ class _ChildDetailState extends State<ChildDetail> {
 
   @override
   void dispose() {
+    generation++;
+    refreshTimer?.cancel();
+    freshnessTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     playback?.cancel();
     super.dispose();
   }
 
+  void resumeRefresh() {
+    refreshTimer?.cancel();
+    freshnessTimer?.cancel();
+    refreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (activeLoads == 0) load();
+    });
+    freshnessTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      resumeRefresh();
+      load();
+    } else {
+      generation++; // Ignore responses started before the app was paused.
+      refreshTimer?.cancel();
+      freshnessTimer?.cancel();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant ChildDetail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.child['deviceId'] != widget.child['deviceId']) {
+      generation++;
+      history = [];
+      speedAlerts = [];
+      zones = {};
+      latestReport = widget.child['latest'] as Map<String, dynamic>?;
+      lastFix = newestDeviceFix(widget.child['deviceId'], [
+        latestReport,
+        widget.child['locationFix'],
+      ]);
+      busy = true;
+      load();
+    }
+  }
+
   Future<void> load() async {
+    final request = ++generation;
+    final deviceId = widget.child['deviceId'] as String;
+    final path = Uri.encodeComponent(deviceId);
+    activeLoads++;
     try {
-      final h = await FamilyApi.request('/api/location/history/$id');
-      final z = await FamilyApi.request('/api/zones/$id');
+      final results = [
+        await FamilyApi.request('/api/location/latest/$path'),
+        await FamilyApi.request('/api/location/history/$path'),
+        await FamilyApi.request('/api/zones/$path'),
+      ];
+      List<dynamic> alerts = [];
       try {
-        final alerts = await FamilyApi.request('/api/alerts');
-        speedAlerts = (alerts['alerts'] as List? ?? [])
-            .where(
-              (a) =>
-                  a['deviceId'] == widget.child['deviceId'] &&
-                  a['type'] == 'speed',
-            )
+        final response = await FamilyApi.request('/api/alerts');
+        alerts = (response['alerts'] as List? ?? [])
+            .where((a) => a['deviceId'] == deviceId && a['type'] == 'speed')
             .toList();
       } catch (_) {}
-      if (mounted)
-        setState(() {
-          history = h as List? ?? [];
-          zones = Map<String, dynamic>.from(z ?? {});
-          busy = false;
-          error = '';
-        });
+      if (!mounted ||
+          request != generation ||
+          deviceId != widget.child['deviceId'])
+        return;
+      setState(() {
+        latestReport = results[0] == null
+            ? null
+            : Map<String, dynamic>.from(results[0] as Map);
+        history = (results[1] as List? ?? [])
+            .where((h) => h is Map && h['deviceId'] == deviceId)
+            .toList();
+        lastFix = newestDeviceFix(deviceId, [
+          lastFix,
+          latestReport,
+          ...history,
+        ]);
+        zones = Map<String, dynamic>.from(results[2] as Map? ?? {});
+        speedAlerts = alerts;
+        busy = false;
+        error = '';
+        if (playing) {
+          playback?.cancel();
+          playing = false;
+        }
+      });
     } catch (_) {
-      if (mounted)
+      if (mounted && request == generation)
         setState(() {
           busy = false;
-          error = 'Could not load this child. Try again.';
+          error = 'Could not refresh this child. Showing last received data.';
         });
+    } finally {
+      activeLoads--;
     }
   }
 
@@ -1635,27 +1716,12 @@ class _ChildDetailState extends State<ChildDetail> {
         .map((x) => Map<String, dynamic>.from(x))
         .where((x) => point(x) != null)
         .toList();
-    final latest = widget.child['latest'] as Map<String, dynamic>?;
-    final validFixes =
-        history
-            .whereType<Map>()
-            .map((h) => Map<String, dynamic>.from(h))
-            .where((h) => point(h) != null)
-            .toList()
-          ..sort(
-            (a, b) =>
-                (DateTime.tryParse(b['fixAt']?.toString() ?? '') ??
-                        DateTime(1900))
-                    .compareTo(
-                      DateTime.tryParse(a['fixAt']?.toString() ?? '') ??
-                          DateTime(1900),
-                    ),
-          );
-    final location = point(latest) != null
-        ? latest
-        : (validFixes.isNotEmpty
-              ? validFixes.first
-              : widget.child['locationFix'] as Map<String, dynamic>?);
+    final latest = latestReport;
+    final location = newestDeviceFix(widget.child['deviceId'], [
+      lastFix,
+      latest,
+      ...history,
+    ]);
     final current = point(location);
     final pts = ordered.map((x) => point(x)!).toList();
     final shown = playing && pts.isNotEmpty
@@ -1665,7 +1731,7 @@ class _ChildDetailState extends State<ChildDetail> {
         : <LatLng>[];
     final safe = zones['zones'] as List? ?? [];
     final sos = history.where((x) => x['emergency'] == true).toList();
-    final live = fresh(latest);
+    final live = fresh(location) && error.isEmpty;
     final name = widget.child['childName'] ?? 'Child';
     return DefaultTabController(
       length: 5,
@@ -1715,7 +1781,7 @@ class _ChildDetailState extends State<ChildDetail> {
                         child: Stack(
                           children: [
                             MiniMap(
-                              key: ValueKey('route-$playing-$playIndex'),
+                              key: ValueKey('route-$playing-$playIndex-${playing ? '' : current}'),
                               points: shown,
                               fresh: !playing && live,
                               zones: safe,
