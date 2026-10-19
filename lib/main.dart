@@ -823,6 +823,19 @@ class _FamilyHomeState extends State<FamilyHome> {
       ]),
       SizedBox(height: 16),
       panel([
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.system_update_alt, color: green),
+          title: Text(
+            'Check for updates',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text('Get the latest Child Safety Parent release'),
+          onTap: () => checkUpdateManually(context),
+        ),
+      ]),
+      SizedBox(height: 16),
+      panel([
         SwitchListTile.adaptive(
           contentPadding: EdgeInsets.zero,
           title: Text(
