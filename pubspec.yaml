@@ -1,10 +1,11 @@
 name: child_safety_parent
 description: Private family overview and child location dashboard.
 publish_to: none
-version: 1.4.5+10
+version: 1.4.6+11
 environment:
   sdk: ^3.10.4
 dependencies:
+  shared_preferences: ^2.3.0
   flutter:
     sdk: flutter
   path_provider: ^2.1.5

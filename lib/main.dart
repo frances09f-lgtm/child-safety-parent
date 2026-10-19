@@ -1,3 +1,4 @@
+import 'update/app_update.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -231,6 +232,10 @@ class _FamilyHomeState extends State<FamilyHome> {
     super.initState();
     ZoneAlerts.pendingDevice.addListener(openZoneNotification);
     _restore();
+    // In-app self-update: check the update feed once after first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) maybePromptUpdate(context);
+    });
   }
 
   Future<void> openZoneNotification() async {
