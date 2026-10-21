@@ -7,12 +7,16 @@ class FamilyApi {
   static const storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
-  static String server = '', key = '', email = '', _token = '', _refresh = '';
+  // Public Firebase Web API key for project app-testing-2cdba: public client
+  // configuration, not a secret. Pre-filled so sign-in never asks for it;
+  // the field stays editable for project moves.
+  static const defaultKey = 'AIzaSyCh-l1is7a-wMWZGhHWUnh9rV0BkdvADbk';
+  static String server = '', key = defaultKey, email = '', _token = '', _refresh = '';
   static bool _remember = true;
   static DateTime _expires = DateTime(2000);
   static Future<bool> restore() async {
     server = await storage.read(key: 'server') ?? '';
-    key = await storage.read(key: 'key') ?? '';
+    key = await storage.read(key: 'key') ?? defaultKey;
     email = await storage.read(key: 'email') ?? '';
     final until = DateTime.tryParse(
       await storage.read(key: 'rememberUntil') ?? '',
