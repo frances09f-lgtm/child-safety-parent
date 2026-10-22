@@ -171,6 +171,25 @@
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
   .sect{font-size:11px;font-weight:800;letter-spacing:1.4px;color:var(--ink-soft);margin:22px 4px -2px}
 
+
+  /* master key (client) */
+  .masterkey{display:flex;align-items:center;gap:14px;margin-top:16px;padding:18px;border-radius:28px;background:var(--card);border:1px solid transparent;cursor:pointer;transition:all .25s ease}
+  body.dark .masterkey{border-color:#322d28}
+  .masterkey.on{background:var(--lavender)}
+  body.dark .masterkey.on{border-color:transparent}
+  .masterkey .mk-tic{width:48px;height:48px;border-radius:18px;display:grid;place-items:center;flex:none;background:var(--track);color:var(--ink-soft);transition:all .22s var(--spring)}
+  .masterkey.on .mk-tic{background:var(--lavender-deep);color:#fff}
+  .masterkey .mk-tt{flex:1;min-width:0}
+  .masterkey .mk-tt b{display:block;font-size:17px;font-weight:800}
+  .masterkey .mk-tt span{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+  .masterkey.on .mk-tt b{color:#201A17}
+  .masterkey.on .mk-tt span{color:#4c463f}
+  .sw.big{width:72px;height:42px}
+  .sw.big .th{width:34px;height:34px}
+  .sw.big.on .th{left:34px}
+  .masterkey .sw.on .tr{background:var(--lavender-deep)}
+  .tile.locked{opacity:.45}
+
   /* snackbar */
   .snack{
     position:absolute;left:16px;right:16px;bottom:96px;
@@ -305,6 +324,12 @@
         </div>
       </div>
 
+
+      <div class="masterkey on press" id="masterKey" onclick="toggleMaster()">
+        <div class="mk-tic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v9"/><path d="M18.4 5.6a8 8 0 1 1-12.8 0"/></svg></div>
+        <div class="mk-tt"><b>Protection</b><span id="masterSub">Master key on - all tracking active</span></div>
+        <div class="sw big on" id="swMaster"><span class="tr"></span><span class="th"></span></div>
+      </div>
       <div class="hero live" id="clientHero">
         <div class="bstate"><span class="statusdot"></span><span id="clientState">Tracking is active</span></div>
         <p class="bsub" id="clientStateSub">Reports about every 5 min. Change the interval on the parent dashboard.</p>
@@ -362,7 +387,7 @@
 
 <script>
   var screen = 'parent', parentTab = 'children';
-  var dark = false, sharing = true, tracking = true, zone = true;
+  var dark = false, sharing = true, tracking = true, zone = true, master = true;
 
   function $(id){ return document.getElementById(id); }
 
@@ -393,13 +418,31 @@
     $('tileZone').classList.toggle('on', zone);
     toast(zone ? 'Zone alerts on (preview only)' : 'Zone alerts off (preview only)');
   }
-  function toggleShare(){
+  function toggleMaster(){
+    master = !master;
+    $('swMaster').classList.toggle('on', master);
+    $('masterKey').classList.toggle('on', master);
+    $('masterSub').textContent = master ? 'Master key on - all tracking active' : 'Master key off - everything paused';
+    if(master){
+      if(!sharing) toggleShare(true);
+      if(!tracking) toggleTrack(true);
+    } else {
+      if(sharing) toggleShare(true);
+      if(tracking) toggleTrack(true);
+    }
+    $('tileShare').classList.toggle('locked', !master);
+    $('tileTrack').classList.toggle('locked', !master);
+    toast(master ? 'Master key on - protection active (preview only)' : 'Master key off - all tracking paused (preview only)');
+  }
+  function toggleShare(force){
+    if(!master && !force){ toast('Turn the master key on first (preview only)'); return; }
     sharing = !sharing;
     $('swShare').classList.toggle('on', sharing);
     $('tileShare').classList.toggle('on', sharing);
     $('shareSub').textContent = sharing ? 'Family can see this phone' : 'Sharing is off';
   }
-  function toggleTrack(){
+  function toggleTrack(force){
+    if(!master && !force){ toast('Turn the master key on first (preview only)'); return; }
     tracking = !tracking;
     $('swTrack').classList.toggle('on', tracking);
     $('tileTrack').classList.toggle('on', tracking);
