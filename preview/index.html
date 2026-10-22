@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Child Safety UI draft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FAF7F2; --card:#FFFFFF; --ink:#201A17; --ink-soft:#6F675F;
+    --mint:#D8F0DC; --mint-deep:#1E6B3C;
+    --lavender:#E9E2FB; --lavender-deep:#5A3FA8;
+    --peach:#FFE4CE; --peach-deep:#9A4A12;
+    --sky:#D9EAFB; --sky-deep:#1D5A96;
+    --lemon:#F7F0C8; --lemon-deep:#77680A;
+    --red:#E5484D; --track:#EDE8E0;
+    --spring:cubic-bezier(0.34,1.56,0.64,1);
+  }
+  body.dark{
+    --bg:#171411; --card:#23201C; --ink:#F2EDE6; --ink-soft:#B4ABA0;
+    --track:#23201C;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Roboto',system-ui,-apple-system,sans-serif;
+    background:var(--bg); color:var(--ink);
+    display:flex; flex-direction:column; align-items:center;
+    transition:background .25s ease, color .25s ease;
+  }
+  .page-head{ text-align:center; padding:28px 20px 8px; max-width:560px;}
+  .page-head h1{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+  .page-head p{font-size:13px;color:var(--ink-soft);margin-top:6px;line-height:1.5}
+  .shell{width:100%;max-width:430px;display:flex;flex-direction:column;min-height:0;flex:1;padding:8px 12px 0;}
+  .shellbar{display:flex;align-items:center;gap:10px;padding:6px 4px 10px;}
+  .switcher{display:flex;background:var(--card);border-radius:24px;padding:4px;transition:background .25s ease;}
+  .switcher button{
+    border:0;background:transparent;cursor:pointer;font-family:inherit;
+    font-size:13px;font-weight:700;color:var(--ink-soft);
+    padding:9px 12px;border-radius:20px;
+    transition:all .28s var(--spring);
+  }
+  .switcher button.on{background:var(--ink);color:#fff;padding:9px 18px;}
+  .chip{
+    background:var(--lemon);color:var(--lemon-deep);
+    font-size:10px;font-weight:800;letter-spacing:1.2px;
+    padding:7px 12px;border-radius:16px;white-space:nowrap;
+  }
+  .app{
+    position:relative;flex:1;min-height:640px;
+    background:var(--bg);border-radius:36px 36px 0 0;
+    overflow:hidden;display:flex;flex-direction:column;
+    transition:background .25s ease;
+  }
+  .scroll{flex:1;overflow-y:auto;padding:16px 18px 24px;scrollbar-width:none}
+  .scroll::-webkit-scrollbar{display:none}
+
+  /* press spring */
+  .press{transition:transform .18s var(--spring)}
+  .press:active{transform:scale(.97)}
+
+  /* header row */
+  .hrow{display:flex;align-items:center;justify-content:space-between}
+  h2.screen-title{font-size:26px;font-weight:800;letter-spacing:-0.8px}
+  .sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+  .iconbtn{border:0;background:transparent;cursor:pointer;color:var(--ink-soft);padding:8px;border-radius:14px;display:grid;place-items:center;transition:transform .18s var(--spring)}
+  .iconbtn:active{transform:scale(.9)}
+
+  /* child card */
+  .child{border-radius:32px;padding:18px;margin-top:16px;position:relative;cursor:pointer;transition:transform .18s var(--spring)}
+  .child:active{transform:scale(.97)}
+  .child .toprow{display:flex;gap:14px;align-items:center}
+  .avatar{width:52px;height:52px;border-radius:20px;display:grid;place-items:center;color:#fff;font-size:24px;font-weight:800}
+  .cname{font-size:18px;font-weight:800;color:#201A17;display:flex;align-items:center;gap:8px}
+  .tag{font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:14px}
+  .tag.live{color:#fff}
+  .tag.known{background:#EDE8E0;color:#6F675F}
+  .cdev{font-size:12px;color:#4c463f;margin-top:3px;opacity:.75}
+  .minimap{margin-top:14px;border-radius:20px;height:108px;position:relative;overflow:hidden}
+  .pin{position:absolute;left:50%;top:50%;width:18px;height:18px;border-radius:50%;border:4px solid #fff;transform:translate(-50%,-50%)}
+  .mcity{position:absolute;left:10px;bottom:10px;background:rgba(32,26,23,.85);color:#fff;font-size:11px;padding:5px 10px;border-radius:14px}
+  .stats{display:flex;gap:6px;margin-top:12px}
+  .stat{flex:1;background:#fff;border-radius:18px;padding:12px 4px;text-align:center}
+  .stat b{display:block;font-size:9.5px;font-weight:700;color:#4c463f;opacity:.7;letter-spacing:.4px}
+  .stat span{display:block;font-size:12px;font-weight:800;color:#201A17;margin-top:3px}
+  .zone{margin-top:10px;background:#fff;border-radius:18px;padding:12px;font-size:11.5px;font-weight:600;color:#6F675F}
+  .zone.alert{background:var(--lemon);color:var(--lemon-deep)}
+  .sos-flag{position:absolute;top:0;right:0;background:var(--red);color:#fff;font-size:10px;font-weight:800;padding:7px 14px;border-radius:0 32px 0 16px}
+  .foot-note{padding:12px;font-size:11px;color:var(--ink-soft);text-align:center;line-height:1.6}
+
+  /* toggle tile */
+  .tile{
+    display:flex;align-items:center;gap:14px;
+    background:var(--card);border-radius:28px;padding:16px 18px;margin-top:12px;
+    transition:background .22s ease;
+  }
+  .tile.on-tint{background:var(--tint)}
+  .tile .tic{
+    width:44px;height:44px;border-radius:18px;display:grid;place-items:center;flex:none;
+    background:var(--track);color:var(--ink-soft);
+    transition:all .22s var(--spring);
+  }
+  .tile.on .tic{background:var(--accent);color:#fff}
+  .tile .tt{flex:1;min-width:0}
+  .tile .tt b{display:block;font-size:16px;font-weight:700}
+  .tile .tt span{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+
+  /* switch */
+  .sw{position:relative;width:52px;height:32px;flex:none;cursor:pointer}
+  .sw input{opacity:0;width:0;height:0;position:absolute}
+  .sw .tr{position:absolute;inset:0;border-radius:20px;background:var(--track);transition:background .22s ease}
+  .sw .th{
+    position:absolute;top:4px;left:4px;width:24px;height:24px;border-radius:50%;
+    background:var(--ink-soft);transition:all .26s var(--spring);
+  }
+  .sw.on .tr{background:var(--accent)}
+  .sw.on .th{left:24px;background:#fff}
+
+  /* dock */
+  .dock{
+    margin:0 12px 18px;background:var(--card);border-radius:36px;
+    box-shadow:0 8px 24px rgba(0,0,0,.13);
+    display:flex;justify-content:space-evenly;padding:10px 8px;
+    transition:background .25s ease;
+  }
+  .dock button{
+    border:0;background:transparent;cursor:pointer;font-family:inherit;
+    display:flex;align-items:center;gap:8px;color:var(--ink-soft);
+    font-size:13px;font-weight:700;padding:10px 14px;border-radius:24px;
+    transition:all .28s var(--spring);
+  }
+  .dock button.on{background:var(--ink);color:#fff;padding:10px 20px}
+  .dock button:active{transform:scale(.95)}
+
+  /* client info card */
+  .icard{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:28px;padding:18px;margin-top:12px;transition:background .22s ease}
+  .icard.tinted{background:var(--tint)}
+  .icard .tic{width:44px;height:44px;border-radius:18px;display:grid;place-items:center;flex:none;background:var(--accent);color:#fff}
+  .icard .tt b{display:block;font-size:15.5px;font-weight:700;color:#201A17}
+  body.dark .icard .tt b{color:var(--ink)}
+  .icard .tt span{display:block;font-size:12.5px;color:#6F675F;margin-top:2px}
+  .sos{
+    margin-top:22px;width:100%;border:0;cursor:pointer;font-family:inherit;
+    background:var(--red);color:#fff;font-size:16px;font-weight:800;letter-spacing:1.2px;
+    padding:20px;border-radius:30px;transition:transform .18s var(--spring);
+  }
+  .sos:active{transform:scale(.97)}
+  .big-state{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1.1;margin-top:18px;animation:pop .3s var(--spring)}
+  @keyframes pop{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* snackbar */
+  .snack{
+    position:absolute;left:16px;right:16px;bottom:96px;
+    background:#201A17;color:#fff;border-radius:20px;padding:14px 18px;
+    font-size:13px;font-weight:500;box-shadow:0 10px 28px rgba(0,0,0,.25);
+    opacity:0;transform:translateY(12px);pointer-events:none;
+    transition:all .28s var(--spring);z-index:5;
+  }
+  .snack.show{opacity:1;transform:none}
+
+  footer{max-width:560px;text-align:center;padding:20px 20px 34px;font-size:12px;color:var(--ink-soft);line-height:1.6}
+  svg{display:block}
+</style>
+</head>
+<body>
+
+<header class="page-head">
+  <h1>Child Safety UI draft</h1>
+  <p>Clickable prototype of the parent and child apps. Try the dock, switches, themes, and the SOS button.</p>
+</header>
+
+<div class="shell">
+  <div class="shellbar">
+    <div class="switcher">
+      <button id="tabParent" class="on" onclick="setScreen('parent')">Parent app</button>
+      <button id="tabClient" onclick="setScreen('client')">Client app</button>
+    </div>
+    <span class="chip">UI PREVIEW</span>
+  </div>
+
+  <div class="app" id="app">
+    <!-- ============ PARENT APP ============ -->
+    <div class="scroll" id="parentHome">
+      <div class="hrow">
+        <div>
+          <h2 class="screen-title">Your Family</h2>
+          <div class="sub">2 protected devices connected</div>
+        </div>
+        <button class="iconbtn" onclick="toast('Refreshing locations (preview only)')" aria-label="Refresh">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+        </button>
+      </div>
+
+      <!-- child: jee -->
+      <div class="child press" style="background:var(--mint)" onclick="toast('jee - full report opens here in the real app')">
+        <div class="toprow">
+          <div class="avatar" style="background:var(--mint-deep)">J</div>
+          <div>
+            <div class="cname">jee <span class="tag live" style="background:var(--mint-deep)">Live</span></div>
+            <div class="cdev">Android - OnePlus Nord</div>
+          </div>
+        </div>
+        <div class="minimap">
+          <svg width="100%" height="108" preserveAspectRatio="none" viewBox="0 0 400 108">
+            <rect width="400" height="108" fill="#EFF3EC"/>
+            <line x1="-20" y1="38" x2="420" y2="59" stroke="#fff" stroke-width="10"/>
+            <line x1="120" y1="-20" x2="220" y2="128" stroke="#fff" stroke-width="10"/>
+            <circle cx="320" cy="27" r="26" fill="#DCEBD8"/>
+            <circle cx="60" cy="92" r="20" fill="#DCEBD8"/>
+            <path d="M60 86 Q160 54 200 54 Q260 54 320 32" stroke="#1E6B3C" stroke-opacity=".5" stroke-width="4" fill="none"/>
+          </svg>
+          <div class="pin" style="background:var(--mint-deep)"></div>
+          <div class="mcity">Ichalkaranji - +/-12m</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>BATTERY</b><span>68%</span></div>
+          <div class="stat"><b>LAST REPORT</b><span>2 min ago</span></div>
+          <div class="stat" style="background:var(--mint-deep)"><b style="color:#fff;opacity:.8">STATUS</b><span style="color:#fff">Live GPS</span></div>
+        </div>
+        <div class="zone alert">Zone Alert: Left Home - 9:41 AM</div>
+      </div>
+
+      <!-- child: non -->
+      <div class="child press" style="background:var(--lavender)" onclick="toast('non - full report opens here in the real app')">
+        <div class="sos-flag">SOS ACTIVE</div>
+        <div class="toprow">
+          <div class="avatar" style="background:var(--lavender-deep)">N</div>
+          <div>
+            <div class="cname">non <span class="tag known">Last known</span></div>
+            <div class="cdev">Android - vivo</div>
+          </div>
+        </div>
+        <div class="minimap">
+          <svg width="100%" height="108" preserveAspectRatio="none" viewBox="0 0 400 108">
+            <rect width="400" height="108" fill="#EFF3EC"/>
+            <line x1="-20" y1="38" x2="420" y2="59" stroke="#fff" stroke-width="10"/>
+            <line x1="120" y1="-20" x2="220" y2="128" stroke="#fff" stroke-width="10"/>
+            <circle cx="320" cy="27" r="26" fill="#DCEBD8"/>
+            <circle cx="60" cy="92" r="20" fill="#DCEBD8"/>
+            <path d="M60 86 Q160 54 200 54 Q260 54 320 32" stroke="#5A3FA8" stroke-opacity=".5" stroke-width="4" fill="none"/>
+          </svg>
+          <div class="pin" style="background:var(--lavender-deep)"></div>
+          <div class="mcity">Ichalkaranji - +/-30m</div>
+        </div>
+        <div class="stats">
+          <div class="stat"><b>BATTERY</b><span>41%</span></div>
+          <div class="stat"><b>LAST REPORT</b><span>1 hr ago</span></div>
+          <div class="stat"><b>STATUS</b><span>Last known</span></div>
+        </div>
+        <div class="zone">No zone alerts yet</div>
+      </div>
+
+      <div class="foot-note">Reports refresh while open. This app does not call emergency services.</div>
+    </div>
+
+    <div class="scroll" id="parentSettings" style="display:none">
+      <h2 class="screen-title" style="font-size:24px;margin-top:2px">Parent Account Settings</h2>
+      <div class="tile on-tint" id="tileDark" style="--tint:var(--lavender);--accent:var(--lavender-deep)">
+        <div class="tic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></div>
+        <div class="tt"><b>Dark mode</b><span>Easier on the eyes at night</span></div>
+        <div class="sw" id="swDark" onclick="toggleDark()"><span class="tr"></span><span class="th"></span></div>
+      </div>
+      <div class="tile on-tint on" id="tileZone" style="--tint:var(--lemon);--accent:var(--lemon-deep)">
+        <div class="tic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div>
+        <div class="tt"><b>Zone alerts</b><span>Push when a child enters or leaves a zone</span></div>
+        <div class="sw on" id="swZone" onclick="toggleZone()"><span class="tr"></span><span class="th"></span></div>
+      </div>
+    </div>
+
+    <!-- ============ CLIENT APP ============ -->
+    <div class="scroll" id="clientHome" style="display:none;padding:18px 22px 24px">
+      <div class="hrow">
+        <div style="font-size:15px;font-weight:700;color:var(--ink-soft)">This phone</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="iconbtn" onclick="toast('Update check runs here in the real app')" aria-label="Updates">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          </button>
+          <button class="iconbtn" id="clientThemeBtn" onclick="toggleDark()" aria-label="Switch theme">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="big-state" id="clientState">Tracking is active</div>
+      <p class="sub" id="clientStateSub" style="font-size:13px;line-height:1.5;margin-top:8px">Reports about every 5 min. Change the interval on the parent dashboard.</p>
+
+      <div class="icard press tinted" id="cardGps" style="--tint:var(--mint);--accent:var(--mint-deep)">
+        <div class="tic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+        <div class="tt"><b id="gpsTitle">Live GPS</b><span>Last fix 9:41 AM - +/-12 m - Ichalkaranji</span></div>
+      </div>
+      <div class="icard press" style="--accent:var(--sky-deep)">
+        <div class="tic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><path d="M6 11v2M10 11v2"/></svg></div>
+        <div class="tt"><b>Battery 68%</b><span>Background reporting healthy</span></div>
+      </div>
+      <div class="icard press" style="--accent:var(--lavender-deep)">
+        <div class="tic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg></div>
+        <div class="tt"><b>Connected</b><span>Syncing with the parent dashboard</span></div>
+      </div>
+
+      <div class="tile on-tint on" id="tileShare" style="--tint:var(--lemon);--accent:var(--lemon-deep)">
+        <div class="tic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+        <div class="tt"><b>Location sharing</b><span id="shareSub">Family can see this phone</span></div>
+        <div class="sw on" id="swShare" onclick="toggleShare()"><span class="tr"></span><span class="th"></span></div>
+      </div>
+      <div class="tile on-tint on" id="tileTrack" style="--tint:var(--mint);--accent:var(--mint-deep)">
+        <div class="tic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5 3.5-5 3.5z" fill="currentColor" stroke="none"/></svg></div>
+        <div class="tt"><b>Tracking</b><span id="trackSub">Reporting in the background</span></div>
+        <div class="sw on" id="swTrack" onclick="toggleTrack()"><span class="tr"></span><span class="th"></span></div>
+      </div>
+
+      <button class="sos press" onclick="toast('SOS saved for retry (preview only)')">SEND SOS</button>
+      <div class="foot-note">SOS is saved for retry if offline, even without GPS. This app does not call police or send SMS.</div>
+    </div>
+
+    <!-- parent dock -->
+    <div class="dock" id="parentDock">
+      <button class="on" id="dockChildren" onclick="setParentTab('children')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M2.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M15 15.5c2.6.3 4.5 2.2 4.5 4.5"/></svg>
+        <span>Children</span>
+      </button>
+      <button id="dockSettings" onclick="setParentTab('settings')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h0a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55h0a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v0a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+        <span style="display:none">Settings</span>
+      </button>
+    </div>
+
+    <div class="snack" id="snack"></div>
+  </div>
+</div>
+
+<footer>
+  This is a design draft for approval, not the real app. All names, locations and numbers are sample data. Nothing is sent, stored, or connected to any device.
+</footer>
+
+<script>
+  var screen = 'parent', parentTab = 'children';
+  var dark = false, sharing = true, tracking = true, zone = true;
+
+  function $(id){ return document.getElementById(id); }
+
+  function setScreen(s){
+    screen = s;
+    $('tabParent').classList.toggle('on', s==='parent');
+    $('tabClient').classList.toggle('on', s==='client');
+    render();
+  }
+  function setParentTab(t){
+    parentTab = t;
+    var sc = t==='children';
+    $('dockChildren').classList.toggle('on', sc);
+    $('dockSettings').classList.toggle('on', !sc);
+    $('dockChildren').querySelector('span').style.display = sc ? '' : 'none';
+    $('dockSettings').querySelector('span').style.display = sc ? 'none' : '';
+    render();
+  }
+  function toggleDark(){
+    dark = !dark;
+    document.body.classList.toggle('dark', dark);
+    $('swDark').classList.toggle('on', dark);
+    $('tileDark').classList.toggle('on', dark);
+  }
+  function toggleZone(){
+    zone = !zone;
+    $('swZone').classList.toggle('on', zone);
+    $('tileZone').classList.toggle('on', zone);
+    toast(zone ? 'Zone alerts on (preview only)' : 'Zone alerts off (preview only)');
+  }
+  function toggleShare(){
+    sharing = !sharing;
+    $('swShare').classList.toggle('on', sharing);
+    $('tileShare').classList.toggle('on', sharing);
+    $('shareSub').textContent = sharing ? 'Family can see this phone' : 'Sharing is off';
+  }
+  function toggleTrack(){
+    tracking = !tracking;
+    $('swTrack').classList.toggle('on', tracking);
+    $('tileTrack').classList.toggle('on', tracking);
+    $('trackSub').textContent = tracking ? 'Reporting in the background' : 'Paused by this phone';
+    $('clientState').textContent = tracking ? 'Tracking is active' : 'Ready when you are';
+    $('clientStateSub').textContent = tracking
+      ? 'Reports about every 5 min. Change the interval on the parent dashboard.'
+      : 'Tracking is paused. Nothing is being shared.';
+    $('gpsTitle').textContent = tracking ? 'Live GPS' : 'GPS paused';
+    $('cardGps').classList.toggle('tinted', tracking);
+  }
+  var snackTimer = null;
+  function toast(msg){
+    var s = $('snack');
+    s.textContent = msg;
+    s.classList.add('show');
+    clearTimeout(snackTimer);
+    snackTimer = setTimeout(function(){ s.classList.remove('show'); }, 2400);
+  }
+  function render(){
+    var isParent = screen==='parent';
+    $('parentHome').style.display = (isParent && parentTab==='children') ? '' : 'none';
+    $('parentSettings').style.display = (isParent && parentTab==='settings') ? '' : 'none';
+    $('clientHome').style.display = isParent ? 'none' : '';
+    $('parentDock').style.display = isParent ? '' : 'none';
+  }
+  render();
+</script>
+</body>
+</html>
