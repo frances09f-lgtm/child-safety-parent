@@ -1,3 +1,3 @@
 // Release identity shared with the visible Settings version. No report collection.
-const appVersion = '1.4.10';
-const appBuildNumber = 15;
+const appVersion = '1.4.11';
+const appBuildNumber = 16;
