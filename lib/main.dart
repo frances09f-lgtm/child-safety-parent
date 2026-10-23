@@ -12,6 +12,7 @@ import 'pally.dart';
 import 'detail_reports.dart';
 import 'push.dart';
 import 'zone_alerts.dart';
+import 'background_health.dart';
 import 'history_today.dart';
 import 'activity.dart';
 import 'live/bug_report.dart';
@@ -855,6 +856,7 @@ class _FamilyHomeState extends State<FamilyHome> {
   Widget settingsView() => ListView(
     padding: EdgeInsets.fromLTRB(16, 4, 16, 116),
     children: [
+      const BackgroundWarning(),
       panel([
         Row(
           children: [
@@ -965,7 +967,7 @@ class _FamilyHomeState extends State<FamilyHome> {
             style: TextStyle(fontSize: 13, color: muted),
           ),
         Text(
-          'Alerts on entry and exit. While open: checks every 30 seconds. Background: Android schedules checks from 15 minutes; battery limits, no internet or force-stop can delay or stop alerts. Not instant push. Remembered login required in background.',
+          'Alerts on entry and exit. While open: checks every 30 seconds. Also runs while the app is closed: a small always-on notice keeps checks running about every 30 seconds. Battery limits, no internet or force-stop can delay or stop alerts. Remembered login required in background.',
           style: TextStyle(fontSize: 13, color: muted),
         ),
       ]),
