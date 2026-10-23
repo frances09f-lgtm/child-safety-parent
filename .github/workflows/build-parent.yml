@@ -42,14 +42,14 @@ jobs:
         with:
           name: child-safety-parent-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-      - name: Publish green v1.4.13 APK
+      - name: Publish green v1.4.14 APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(sed -n 's/^version: //p' pubspec.yaml)" = '1.4.13+18'
+          test "$(sed -n 's/^version: //p' pubspec.yaml)" = '1.4.14+19'
           cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/ChildSafetyParent.apk"
-          gh release create v1.4.13 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.13' --notes 'Alerts now arrive when the app is closed. Safe-zone entry and exit alerts name the child and the zone (for example Aarav entered Home) and show once per crossing. SOS, low battery, speed and other alerts are also checked in the background. A small always-on notice keeps the checks running about every 30 seconds, with a 15-minute backup job. Settings warns if notifications or the battery exemption are off. Login, API calls and the child list are unchanged. Signed ARM64 APK after successful static analysis and tests. No phone testing claimed.'
+          gh release create v1.4.14 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.14' --notes 'The zone box on each child card now shows Inside or Outside with the zone name and the time of the last crossing. It switches to a plain Inside or Outside state with no time 10 minutes after the crossing, so an old alert no longer stays on screen. Background alerts from v1.4.13 are unchanged. Login, API calls and the child list are unchanged. Signed ARM64 APK after successful static analysis and tests. No phone testing claimed.'
       - name: Update update-feed (child-safety-updates)
         env:
           FEED_TOKEN: ${{ secrets.UPDATES_FEED_TOKEN }}
