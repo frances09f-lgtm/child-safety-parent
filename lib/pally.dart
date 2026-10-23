@@ -2,28 +2,112 @@ import 'package:flutter/material.dart';
 import 'main.dart';
 
 Widget draftTitle(String text) => Text(text, style: TextStyle(fontFamily: 'Space Grotesk', fontSize: 19, fontWeight: FontWeight.w700, color: ink, letterSpacing: -.45));
-Widget draftHistoryRow(String time, String title, String note) => Padding(padding: const EdgeInsets.symmetric(vertical: 14), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [SizedBox(width: 78, child: Text(time, style: TextStyle(fontSize: 12, color: muted))), const SizedBox(width: 12), Padding(padding: const EdgeInsets.only(top: 5),child: Container(width: 10,height: 10,decoration: BoxDecoration(color: accent,shape: BoxShape.circle))), const SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,children:[Text(title,style:TextStyle(fontSize:14.5,fontWeight:FontWeight.w600,color:ink)),const SizedBox(height:2),Text(note,style:TextStyle(fontSize:12.5,color:muted))]))]));
-
+Widget draftHistoryRow(String time, String title, String note) => Padding(
+  padding: const EdgeInsets.symmetric(vertical: 14),
+  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    SizedBox(width: 78, child: Text(time, style: TextStyle(fontSize: 12, color: muted))),
+    const SizedBox(width: 12),
+    Padding(padding: const EdgeInsets.only(top: 5), child: Container(width: 10, height: 10, decoration: BoxDecoration(color: accent, shape: BoxShape.circle))),
+    const SizedBox(width: 14),
+    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600, color: ink)), const SizedBox(height: 2), Text(note, style: TextStyle(fontSize: 12.5, color: muted))])),
+  ]),
+);
 class SafetyIconButton extends StatelessWidget {
- final IconData icon; final String label; final VoidCallback? onTap;
- const SafetyIconButton({super.key,required this.icon,required this.label,required this.onTap});
- @override Widget build(BuildContext context)=>IconButton(tooltip:label,onPressed:onTap,style:IconButton.styleFrom(backgroundColor:surface,foregroundColor:ink,side:BorderSide(color:edge),minimumSize:const Size(44,44)),icon:Icon(icon,size:21));
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+  const SafetyIconButton({super.key, required this.icon, required this.label, required this.onTap});
+  @override Widget build(BuildContext context) => IconButton(tooltip: label, onPressed: onTap, style: IconButton.styleFrom(backgroundColor: surface, foregroundColor: ink, side: BorderSide(color: edge), minimumSize: const Size(44,44)), icon: Icon(icon,size:21));
 }
 class SafetyHeader extends StatelessWidget implements PreferredSizeWidget {
- final String title; final String? subtitle; final List<Widget> actions;
- const SafetyHeader({super.key,required this.title,this.subtitle,this.actions=const []});
- @override Size get preferredSize=>const Size.fromHeight(100);
- @override Widget build(BuildContext context)=>Container(color:pale,child:SafeArea(bottom:false,child:Padding(padding:const EdgeInsets.fromLTRB(16,15,16,10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[Wrap(spacing:8,crossAxisAlignment:WrapCrossAlignment.center,children:[Text('CHILD SAFETY',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,letterSpacing:1,color:muted)),Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:3),decoration:BoxDecoration(color:soft,borderRadius:BorderRadius.circular(999)),child:Text('PARENT',style:TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:onSoft)))]),const SizedBox(height:5),Text(title,style:TextStyle(fontFamily:'Space Grotesk',fontSize:28,fontWeight:FontWeight.w700,letterSpacing:-.98,height:1.08,color:ink)),if(subtitle!=null)Text(subtitle!,style:TextStyle(fontSize:12.5,color:muted))])),const SizedBox(width:4),SafetyIconButton(icon:ParentTheme.dark.value?Icons.light_mode_outlined:Icons.dark_mode_outlined,label:'Switch theme',onTap:()=>ParentTheme.set(!ParentTheme.dark.value)),...actions]))));
+  final String title;
+  final String? subtitle;
+  final List<Widget> actions;
+  const SafetyHeader({super.key, required this.title, this.subtitle, this.actions=const []});
+  @override Size get preferredSize => const Size.fromHeight(100);
+  @override Widget build(BuildContext context) {
+    return Container(color: pale, child: SafeArea(bottom: false, child: Padding(
+      padding: const EdgeInsets.fromLTRB(16,15,16,10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Wrap(spacing:8,crossAxisAlignment:WrapCrossAlignment.center,children:[
+            Text('CHILD SAFETY',style:TextStyle(fontSize:11,fontWeight:FontWeight.w700,letterSpacing:1,color:muted)),
+            Container(padding:const EdgeInsets.symmetric(horizontal:8,vertical:3),decoration:BoxDecoration(color:soft,borderRadius:BorderRadius.circular(999)),child:Text('PARENT',style:TextStyle(fontSize:10,fontWeight:FontWeight.w700,color:onSoft))),
+          ]),
+          const SizedBox(height:5),
+          Text(title,style:TextStyle(fontFamily:'Space Grotesk',fontSize:28,fontWeight:FontWeight.w700,letterSpacing:-.98,height:1.08,color:ink)),
+          if(subtitle!=null) Text(subtitle!,style:TextStyle(fontSize:12.5,color:muted)),
+        ])),
+        const SizedBox(width:4),
+        SafetyIconButton(icon:ParentTheme.dark.value?Icons.light_mode_outlined:Icons.dark_mode_outlined,label:'Switch theme',onTap:()=>ParentTheme.set(!ParentTheme.dark.value)),
+        ...actions,
+      ]),
+    )));
+  }
 }
-class SafetyDockItem {final IconData icon;final String label;const SafetyDockItem(this.icon,this.label);}
+class SafetyDockItem {
+  final IconData icon;
+  final String label;
+  const SafetyDockItem(this.icon,this.label);
+}
 class SafetyDock extends StatelessWidget {
- final int index;final ValueChanged<int> onTap;final List<SafetyDockItem> items;
- const SafetyDock({super.key,required this.index,required this.onTap,required this.items});
- @override Widget build(BuildContext context)=>SafeArea(top:false,child:Padding(padding:const EdgeInsets.fromLTRB(12,0,12,12),child:Container(height:62,padding:const EdgeInsets.all(6),decoration:BoxDecoration(color:surface,borderRadius:BorderRadius.circular(999),border:Border.all(color:edge),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:ParentTheme.dark.value?.55:.16),blurRadius:44,offset:const Offset(0,18))]),child:Row(children:[for(var i=0;i<items.length;i++)Expanded(child:Padding(padding:const EdgeInsets.symmetric(horizontal:2),child:Semantics(selected:i==index,button:true,label:items[i].label,child:InkWell(borderRadius:BorderRadius.circular(999),onTap:()=>onTap(i),child:AnimatedContainer(duration:const Duration(milliseconds:260),decoration:BoxDecoration(color:i==index?accent:Colors.transparent,borderRadius:BorderRadius.circular(i==index?999:18)),child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[Icon(items[i].icon,size:19,color:i==index?onAccent:muted),const SizedBox(width:6),Flexible(child:Text(items[i].label,style:TextStyle(fontFamily:'Space Grotesk',fontSize:12.5,fontWeight:FontWeight.w600,color:i==index?onAccent:muted)))])))))])))));
+  final int index;
+  final ValueChanged<int> onTap;
+  final List<SafetyDockItem> items;
+  const SafetyDock({super.key,required this.index,required this.onTap,required this.items});
+  Widget item(int i) {
+    final active = i == index;
+    return Expanded(child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal:2),
+      child: Semantics(selected:active,button:true,label:items[i].label,child:InkWell(
+        borderRadius:BorderRadius.circular(999),onTap:()=>onTap(i),
+        child:AnimatedContainer(
+          duration:const Duration(milliseconds:260),
+          decoration:BoxDecoration(color:active?accent:Colors.transparent,borderRadius:BorderRadius.circular(active?999:18)),
+          child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+            Icon(items[i].icon,size:19,color:active?onAccent:muted),
+            const SizedBox(width:6),
+            Flexible(child:Text(items[i].label,style:TextStyle(fontFamily:'Space Grotesk',fontSize:12.5,fontWeight:FontWeight.w600,color:active?onAccent:muted))),
+          ]),
+        ),
+      )),
+    ));
+  }
+  @override Widget build(BuildContext context) {
+    return SafeArea(top:false,child:Padding(
+      padding:const EdgeInsets.fromLTRB(12,0,12,12),
+      child:Container(
+        height:62,padding:const EdgeInsets.all(6),
+        decoration:BoxDecoration(color:surface,borderRadius:BorderRadius.circular(999),border:Border.all(color:edge),boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:ParentTheme.dark.value ? 0.55 : 0.16),blurRadius:44,offset:const Offset(0,18))]),
+        child:Row(children:[for(var i=0;i<items.length;i++) item(i)]),
+      ),
+    ));
+  }
 }
 class SafetyDetailHeader extends StatelessWidget implements PreferredSizeWidget {
- final String name,subtitle;final List<String> labels;
- const SafetyDetailHeader({super.key,required this.name,required this.subtitle,required this.labels});
- @override Size get preferredSize=>const Size.fromHeight(168);
- @override Widget build(BuildContext context)=>Container(color:pale,child:SafeArea(bottom:false,child:Column(children:[Padding(padding:const EdgeInsets.fromLTRB(16,15,16,10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[SafetyIconButton(icon:Icons.chevron_left,label:'Back to Your Family',onTap:()=>Navigator.pop(context)),const SizedBox(width:10),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('PROTECTED DEVICE',style:TextStyle(fontSize:11,color:muted,fontWeight:FontWeight.w700,letterSpacing:.8)),const SizedBox(height:4),draftTitle("$name's Dashboard"),Text(subtitle,style:TextStyle(fontSize:12.5,color:muted),maxLines:2,overflow:TextOverflow.ellipsis)]))])),Builder(builder:(context){final c=DefaultTabController.of(context);return AnimatedBuilder(animation:c,builder:(context,_)=>SizedBox(height:52,child:ListView.separated(scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:16),itemCount:labels.length,separatorBuilder:(_,index)=>const SizedBox(width:8),itemBuilder:(context,i)=>Padding(padding:const EdgeInsets.only(bottom:4),child:TextButton(onPressed:()=>c.animateTo(i),style:TextButton.styleFrom(backgroundColor:c.index==i?accent:surface,foregroundColor:c.index==i?onAccent:ink,minimumSize:const Size(0,44),padding:const EdgeInsets.symmetric(horizontal:15),side:BorderSide(color:c.index==i?Colors.transparent:edge),shape:const StadiumBorder()),child:Text(labels[i],style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)))))));})])));
+  final String name,subtitle;
+  final List<String> labels;
+  const SafetyDetailHeader({super.key,required this.name,required this.subtitle,required this.labels});
+  @override Size get preferredSize=>const Size.fromHeight(168);
+  @override Widget build(BuildContext context) {
+    return Container(color:pale,child:SafeArea(bottom:false,child:Column(children:[
+      Padding(padding:const EdgeInsets.fromLTRB(16,15,16,10),child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        SafetyIconButton(icon:Icons.chevron_left,label:'Back to Your Family',onTap:()=>Navigator.pop(context)),
+        const SizedBox(width:10),
+        Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('PROTECTED DEVICE',style:TextStyle(fontSize:11,color:muted,fontWeight:FontWeight.w700,letterSpacing:.8)),const SizedBox(height:4),draftTitle("$name's Dashboard"),Text(subtitle,style:TextStyle(fontSize:12.5,color:muted),maxLines:2,overflow:TextOverflow.ellipsis)])),
+      ])),
+      Builder(builder:(context){
+        final c=DefaultTabController.of(context);
+        return AnimatedBuilder(animation:c,builder:(context,_)=>SizedBox(height:52,child:ListView.separated(
+          scrollDirection:Axis.horizontal,padding:const EdgeInsets.symmetric(horizontal:16),itemCount:labels.length,
+          separatorBuilder:(_,index)=>const SizedBox(width:8),
+          itemBuilder:(context,i)=>Padding(padding:const EdgeInsets.only(bottom:4),child:TextButton(
+            onPressed:()=>c.animateTo(i),
+            style:TextButton.styleFrom(backgroundColor:c.index==i?accent:surface,foregroundColor:c.index==i?onAccent:ink,minimumSize:const Size(0,44),padding:const EdgeInsets.symmetric(horizontal:15),side:BorderSide(color:c.index==i?Colors.transparent:edge),shape:const StadiumBorder()),
+            child:Text(labels[i],style:const TextStyle(fontSize:14,fontWeight:FontWeight.w600)),
+          )),
+        )));
+      }),
+    ])));
+  }
 }
