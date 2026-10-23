@@ -831,7 +831,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                   Text(
-                    'Firebase Authentication',
+                    'Signed in with Firebase Authentication. Remembered login required in the background.',
                     style: TextStyle(fontSize: 11, color: muted),
                   ),
                 ],
@@ -1005,6 +1005,13 @@ class _FamilyHomeState extends State<FamilyHome> {
           label: Text('Logout'),
         ),
       ]),
+      Padding(
+        padding: EdgeInsets.all(12),
+        child: Text(
+          'Reports refresh while open. Push notifications are not connected yet. This app does not call emergency services.',
+          style: TextStyle(fontSize: 11, color: muted),
+        ),
+      ),
     ],
   );
   Future<void> removeChild(Map<String, dynamic> child) async {
@@ -1790,7 +1797,7 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
               ),
               Text(
                 live
-                    ? 'Recent GPS fix'
+                    ? 'Recent GPS fix • ${stamp(location?['fixAt'])} • ${location?['city'] ?? 'Location unavailable'}'
                     : 'Last GPS fix: ${stamp(location?['fixAt'])}',
                 style: TextStyle(fontSize: 10, color: live ? green : muted),
               ),
@@ -1804,11 +1811,11 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
             indicatorColor: green,
             labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             tabs: [
-              Tab(text: 'Big Map & History'),
-              Tab(text: 'Safe Zones (${safe.length})'),
-              Tab(text: 'SOS Alerts'),
-              Tab(text: 'Sync Interval'),
-              Tab(text: 'Phone Activity'),
+              Tab(text: 'Map & History'),
+              Tab(text: 'Safe zones (${safe.length})'),
+              Tab(text: 'SOS alerts'),
+              Tab(text: 'Sync interval'),
+              Tab(text: 'Phone activity'),
             ],
           ),
         ),
