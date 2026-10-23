@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:workmanager/workmanager.dart';
@@ -14,29 +17,36 @@ void zoneDispatcher() {
   Workmanager().executeTask((task, input) async {
     WidgetsFlutterBinding.ensureInitialized();
     try {
-      if ((!await ZoneAlerts.isEnabled() && !await ZoneAlerts.speedEnabled()) ||
-          !await FamilyApi.restore())
-        return true;
-      await ZoneAlerts.initializeLocal();
-      final devices = await FamilyApi.request('/api/devices') as List;
-      await ZoneAlerts.pollSpeed();
-      if (await ZoneAlerts.isEnabled())
-        for (final child in devices) {
-          final data = await FamilyApi.request(
-            '/api/zones/${Uri.encodeComponent(child['deviceId'])}',
-          );
-          await ZoneAlerts.consume(
-            Map<String, dynamic>.from(child),
-            (data?['events'] as List?) ?? [],
-          );
-        }
-      await FamilyApi.storage.write(
-        key: 'zoneLastCheck',
-        value: DateTime.now().toUtc().toIso8601String(),
-      );
+      await ZoneAlerts.checkAll();
       return true;
     } catch (_) {
       return false;
+    }
+  });
+}
+
+// Entry point of the always-on watcher (Android foreground service). It runs
+// the same checks as the 15-minute job, every 30 seconds, so zone entries and
+// exits, SOS, low battery and speed alerts arrive within about a minute of
+// the child phone's report, also when the app is closed.
+@pragma('vm:entry-point')
+void liveServiceStart(ServiceInstance service) async {
+  DartPluginRegistrant.ensureInitialized();
+  var busy = false;
+  service.on('stop').listen((_) => service.stopSelf());
+  Timer.periodic(const Duration(seconds: 30), (timer) async {
+    if (busy) return;
+    busy = true;
+    try {
+      if (!await ZoneAlerts.wantsBackground()) {
+        timer.cancel();
+        service.stopSelf();
+        return;
+      }
+      await ZoneAlerts.checkAll();
+    } catch (_) {
+    } finally {
+      busy = false;
     }
   });
 }
@@ -86,7 +96,9 @@ class ZoneAlerts {
     }
     try {
       final p = jsonDecode(payload ?? '{}');
-      if ((p['kind'] == 'zone' || p['kind'] == 'speed') &&
+      if ((p['kind'] == 'zone' ||
+              p['kind'] == 'speed' ||
+              p['kind'] == 'alert') &&
           p['account'] == accountKey()) {
         pendingTab = p['kind'] == 'speed' ? 3 : 1;
         pendingDevice.value = p['device'] as String;
@@ -119,7 +131,8 @@ class ZoneAlerts {
       launchPayload = null;
       receive(payload);
     }
-    if ((!enabled && !await speedEnabled()) || kIsWeb) return;
+    if (kIsWeb) return;
+    if (!enabled && !await speedEnabled() && !await pushAlertsEnabled()) return;
     await initializeWorker();
     await Workmanager().registerPeriodicTask(
       job,
@@ -128,6 +141,9 @@ class ZoneAlerts {
       constraints: Constraints(networkType: NetworkType.connected),
       existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
+    try {
+      await syncLive();
+    } catch (_) {}
   }
 
   static Future<void> enable(List<Map<String, dynamic>> children) async {
@@ -191,6 +207,285 @@ class ZoneAlerts {
     }
   }
 
+  static Future<bool> wantsBackground() async =>
+      await isEnabled() || await speedEnabled() || await pushAlertsEnabled();
+
+  // One round of background checks. Used by the 15-minute job and by the
+  // always-on watcher. Each check reads its own cursor under a file lock, so
+  // an alert is shown once even when both run at the same time.
+  static Future<void> checkAll() async {
+    if (!await wantsBackground() || !await FamilyApi.restore()) return;
+    await initializeLocal();
+    final devices = await FamilyApi.request('/api/devices') as List;
+    try {
+      await pollSpeed();
+    } catch (_) {}
+    try {
+      await pollExtra();
+    } catch (_) {}
+    if (await isEnabled()) {
+      for (final child in devices) {
+        final data = await FamilyApi.request(
+          '/api/zones/${Uri.encodeComponent(child['deviceId'])}',
+        );
+        await consume(
+          Map<String, dynamic>.from(child),
+          (data?['events'] as List?) ?? [],
+        );
+      }
+    }
+    await FamilyApi.storage.write(
+      key: 'zoneLastCheck',
+      value: DateTime.now().toUtc().toIso8601String(),
+    );
+  }
+
+  static Future<void> configureLive() async {
+    await local
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'live_monitor',
+            'Alert watcher',
+            description: 'Keeps safe-zone, SOS and speed alerts running',
+            importance: Importance.low,
+          ),
+        );
+    await FlutterBackgroundService().configure(
+      androidConfiguration: AndroidConfiguration(
+        onStart: liveServiceStart,
+        autoStart: false,
+        autoStartOnBoot: true,
+        isForegroundMode: true,
+        notificationChannelId: 'live_monitor',
+        initialNotificationTitle: 'Child Safety Parent',
+        initialNotificationContent:
+            'Watching for safe-zone, SOS and speed alerts',
+        foregroundServiceNotificationId: 7701,
+        foregroundServiceTypes: [AndroidForegroundType.specialUse],
+      ),
+      iosConfiguration: IosConfiguration(),
+    );
+  }
+
+  // Starts the always-on watcher when any alert is on, and stops it when all
+  // are off. Must run while the app is on screen (Android blocks starting it
+  // from the background).
+  static Future<void> syncLive() async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    final want = await wantsBackground();
+    final service = FlutterBackgroundService();
+    final running = await service.isRunning();
+    if (want) {
+      await initializeLocal();
+      await configureLive();
+      if (!running) await service.startService();
+    } else if (running) {
+      service.invoke('stop');
+    }
+  }
+
+  static String clock(dynamic iso) {
+    final d = DateTime.tryParse(iso?.toString() ?? '')?.toLocal();
+    if (d == null) return 'a recorded time';
+    final h = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final m = d.minute.toString().padLeft(2, '0');
+    return '$h:$m ${d.hour < 12 ? 'AM' : 'PM'}';
+  }
+
+  static Future<bool> pushAlertsEnabled() async =>
+      await FamilyApi.storage.read(key: 'pushAlertsEnabled') == 'true';
+
+  // Turns the background alert check (SOS, low battery and other alerts) on
+  // or off. The check runs in the same Android WorkManager job as the
+  // safe-zone and speed checks, so it also runs when the app is closed.
+  static Future<void> setPushAlerts(bool on) async {
+    await FamilyApi.storage.write(key: 'pushAlertsEnabled', value: '$on');
+    if (kIsWeb) return;
+    if (on) {
+      await restoreSchedule();
+    } else {
+      if (!await isEnabled() && !await speedEnabled()) {
+        await Workmanager().cancelByUniqueName(job);
+      }
+      try {
+        await syncLive();
+      } catch (_) {}
+    }
+  }
+
+  static const _handledTypes = {
+    'speed',
+    'zone',
+    'sos',
+    'emergency',
+    'low_battery',
+    'battery',
+  };
+
+  static Future<void> pollExtra({bool silent = false}) async {
+    if (kIsWeb || !await pushAlertsEnabled()) return;
+    final next = queue.then((_) => extraLocked(silent));
+    queue = next.catchError((Object _) {});
+    return next;
+  }
+
+  static Future<void> _notify(
+    int id,
+    String title,
+    String body,
+    String channel,
+    String channelName,
+    Map<String, dynamic> payload, {
+    bool urgent = false,
+  }) {
+    return local.show(
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          channel,
+          channelName,
+          importance: urgent ? Importance.max : Importance.high,
+          priority: urgent ? Priority.max : Priority.high,
+          visibility: NotificationVisibility.private,
+        ),
+      ),
+      payload: jsonEncode(payload),
+    );
+  }
+
+  static Future<void> extraLocked(bool silent) async {
+    final devices =
+        (await FamilyApi.request('/api/devices').timeout(
+                  const Duration(seconds: 20),
+                )
+                as List)
+            .whereType<Map>()
+            .toList();
+    final config = await FamilyApi.request(
+      '/api/alerts',
+    ).timeout(const Duration(seconds: 20));
+    final others =
+        (config['alerts'] as List? ?? [])
+            .whereType<Map>()
+            .where(
+              (a) =>
+                  a['id'] is num &&
+                  !_handledTypes.contains(a['type']?.toString().toLowerCase()),
+            )
+            .toList()
+          ..sort((a, b) => (a['id'] as num).compareTo(b['id'] as num));
+    final reports = <String, Map>{};
+    for (final d in devices) {
+      final id = d['deviceId']?.toString();
+      if (id == null) continue;
+      try {
+        final r = await FamilyApi.request(
+          '/api/location/latest/${Uri.encodeComponent(id)}',
+        ).timeout(const Duration(seconds: 20));
+        if (r is Map) reports[id] = r;
+      } catch (_) {}
+    }
+    final directory = await getApplicationSupportDirectory();
+    final file = await File(
+      '${directory.path}/zone-alert.lock',
+    ).open(mode: FileMode.append);
+    await file.lock(FileLock.exclusive);
+    try {
+      final account = accountKey();
+      final cursorKey = 'alertCursor:$account';
+      final previous = int.tryParse(
+        await FamilyApi.storage.read(key: cursorKey) ?? '',
+      );
+      var latest = previous ?? 0;
+      for (final a in others) {
+        final id = (a['id'] as num).toInt();
+        if (id <= latest) continue;
+        if (!silent && previous != null) {
+          await _notify(
+            1100000000 + id,
+            a['title']?.toString() ?? 'Family alert',
+            a['body']?.toString() ?? 'New alert from a child phone.',
+            'family_alerts',
+            'Family safety alerts',
+            {
+              'kind': 'alert',
+              'account': account,
+              'device': a['deviceId'],
+            },
+          );
+        }
+        latest = id;
+      }
+      await FamilyApi.storage.write(key: cursorKey, value: '$latest');
+      for (final d in devices) {
+        final device = d['deviceId']?.toString();
+        if (device == null) continue;
+        final name = d['childName']?.toString() ?? 'Child';
+        final report = reports[device];
+        // SOS: notify once for each new SOS report.
+        final sosKey = 'sosSeen:$account:$device';
+        final sosStored = await FamilyApi.storage.read(key: sosKey);
+        final sosNow = report != null && report['emergency'] == true
+            ? (report['receivedAt'] ?? report['fixAt'] ?? 'active').toString()
+            : '';
+        if (sosStored == null) {
+          await FamilyApi.storage.write(key: sosKey, value: sosNow);
+        } else if (sosNow.isNotEmpty && sosNow != sosStored) {
+          if (!silent) {
+            await _notify(
+              2000000000 + device.hashCode.abs() % 100000,
+              'SOS from $name',
+              '$name pressed the SOS button. Open the app to see the location.',
+              'sos_alerts',
+              'SOS alerts',
+              {'kind': 'alert', 'account': account, 'device': device},
+              urgent: true,
+            );
+          }
+          await FamilyApi.storage.write(key: sosKey, value: sosNow);
+        } else if (sosNow.isEmpty && sosStored.isNotEmpty) {
+          await FamilyApi.storage.write(key: sosKey, value: '');
+        }
+        // Low battery: notify once when the level falls to the threshold.
+        final threshold = num.tryParse('${d['lowBatteryThreshold'] ?? 0}') ?? 0;
+        final level = num.tryParse('${report?['battery'] ?? ''}');
+        if (level != null) {
+          final low = isLowBattery(threshold, level);
+          final batKey = 'lowBattery:$account:$device';
+          final batStored = await FamilyApi.storage.read(key: batKey);
+          if (low) {
+            if (batStored != 'low' && batStored != null && !silent) {
+              await _notify(
+                2100000000 + device.hashCode.abs() % 100000,
+                'Low battery on $name',
+                '$name\'s phone is at ${level.round()}%.',
+                'family_alerts',
+                'Family safety alerts',
+                {'kind': 'alert', 'account': account, 'device': device},
+              );
+            }
+            if (batStored != 'low') {
+              await FamilyApi.storage.write(key: batKey, value: 'low');
+            }
+          } else if (batStored != 'ok') {
+            await FamilyApi.storage.write(key: batKey, value: 'ok');
+          }
+        }
+      }
+    } finally {
+      await file.unlock();
+      await file.close();
+    }
+  }
+
+  static bool isLowBattery(num threshold, num level) =>
+      threshold > 0 && level <= threshold;
+
   static Future<void> disable() async {
     enabled = false;
     status = 'Off';
@@ -198,13 +493,18 @@ class ZoneAlerts {
     launchPayload = null;
     await FamilyApi.storage.write(key: 'zoneAlertsEnabled', value: 'false');
     if (!kIsWeb) {
-      if (!await speedEnabled()) await Workmanager().cancelByUniqueName(job);
+      if (!await speedEnabled() && !await pushAlertsEnabled())
+        await Workmanager().cancelByUniqueName(job);
+      try {
+        await syncLive();
+      } catch (_) {}
       await local.cancelAll();
     }
   }
 
   static Future<void> disableAll() async {
     await FamilyApi.storage.write(key: 'speedPollingEnabled', value: 'false');
+    await FamilyApi.storage.write(key: 'pushAlertsEnabled', value: 'false');
     await disable();
   }
 
@@ -236,8 +536,12 @@ class ZoneAlerts {
     );
     if (devices.isNotEmpty)
       await restoreSchedule();
-    else if (!enabled && !kIsWeb)
+    else if (!enabled && !kIsWeb && !await pushAlertsEnabled()) {
       await Workmanager().cancelByUniqueName(job);
+      try {
+        await syncLive();
+      } catch (_) {}
+    }
     return true;
   }
 
@@ -349,9 +653,9 @@ class ZoneAlerts {
           final entered = event['entered'] == true;
           await local.show(
             id: id,
-            title: 'Safe-zone ${entered ? 'entry' : 'exit'}',
-            body:
-                '${child['childName'] ?? 'Child'} ${entered ? 'entered' : 'left'} ${event['zoneName'] ?? 'a safe zone'} at ${event['fixAt'] ?? 'recorded time'}.',
+            title:
+                '${child['childName'] ?? 'Child'} ${entered ? 'entered' : 'left'} ${event['zoneName'] ?? 'a safe zone'}',
+            body: 'Recorded at ${clock(event['fixAt'])}.',
             notificationDetails: const NotificationDetails(
               android: AndroidNotificationDetails(
                 'zone_crossings',
