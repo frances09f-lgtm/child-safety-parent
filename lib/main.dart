@@ -374,7 +374,8 @@ class _FamilyHomeState extends State<FamilyHome> {
     } catch (_) {
       if (mounted)
         setState(
-          () => error = 'Could not refresh. These are the last received reports, not live data.',
+          () => error =
+              'Could not refresh. These are the last received reports, not live data.',
         );
     } finally {
       if (mounted) setState(() => busy = false);
@@ -463,7 +464,8 @@ class _FamilyHomeState extends State<FamilyHome> {
         newPass.text != confirmPass.text ||
         newPass.text == oldPass.text) {
       setState(
-        () => error = 'Use a different password with at least 8 characters and matching confirmation.',
+        () => error =
+            'Use a different password with at least 8 characters and matching confirmation.',
       );
       return;
     }
@@ -474,8 +476,9 @@ class _FamilyHomeState extends State<FamilyHome> {
       newPass.clear();
       confirmPass.clear();
       if (mounted)
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Password updated.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Password updated.')));
     } catch (e) {
       if (mounted)
         setState(() => error = e.toString().replaceFirst('Exception: ', ''));
@@ -492,7 +495,7 @@ class _FamilyHomeState extends State<FamilyHome> {
         : SafetyHeader(
             title: section == 0 ? 'Your Family' : 'Settings',
             subtitle: section == 0
-                ? '\${children.length} protected devices connected'
+                ? '${children.length} protected devices connected'
                 : null,
             actions: section == 0
                 ? [
@@ -637,8 +640,9 @@ class _FamilyHomeState extends State<FamilyHome> {
                 ),
                 Theme(
                   data: Theme.of(context).copyWith(
-                    textTheme: Theme.of(context).textTheme
-                        .apply(bodyColor: muted),
+                    textTheme: Theme.of(
+                      context,
+                    ).textTheme.apply(bodyColor: muted),
                   ),
                   child: ExpansionTile(
                     iconColor: muted,
@@ -861,7 +865,8 @@ class _FamilyHomeState extends State<FamilyHome> {
                       await ZoneAlerts.disable();
                     }
                   } catch (_) {
-                    ZoneAlerts.status = 'Could not save notification settings. Restart and retry.';
+                    ZoneAlerts.status =
+                        'Could not save notification settings. Restart and retry.';
                   } finally {
                     progress.cancel();
                     ZoneAlerts.changing = false;
@@ -953,7 +958,8 @@ class _FamilyHomeState extends State<FamilyHome> {
             } catch (_) {
               if (mounted)
                 setState(
-                  () => error = 'Could not finish logout. You are still signed in; automatic refresh remains on. Retry when connected.',
+                  () => error =
+                      'Could not finish logout. You are still signed in; automatic refresh remains on. Retry when connected.',
                 );
               return;
             }
@@ -1550,7 +1556,8 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate:
+                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.childsafety.parent',
                           ),
                           if (selected != null)
@@ -1613,7 +1620,8 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                     metres > 10000 ||
                     selected == null) {
                   setDialog(
-                    () => formError = 'Choose a centre, a name, and radius from 100 to 10,000 metres.',
+                    () => formError =
+                        'Choose a centre, a name, and radius from 100 to 10,000 metres.',
                   );
                   return;
                 }
