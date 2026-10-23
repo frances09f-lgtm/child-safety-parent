@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -7,6 +8,35 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'api.dart';
 import 'zone_alerts.dart';
+import 'background_health.dart';
+
+// Runs when a push message arrives while the app is closed or in the
+// background. A message that carries a notification block is shown by Android
+// itself; a data-only message is turned into a notification here.
+@pragma('vm:entry-point')
+Future<void> parentBackgroundMessage(RemoteMessage message) async {
+  DartPluginRegistrant.ensureInitialized();
+  if (message.notification != null) return;
+  final title = message.data['title']?.toString();
+  final body = message.data['body']?.toString();
+  if ((title == null || title.isEmpty) && (body == null || body.isEmpty)) {
+    return;
+  }
+  await ZoneAlerts.initializeLocal();
+  await ZoneAlerts.local.show(
+    id: message.messageId.hashCode,
+    title: title ?? 'Family safety alert',
+    body: body,
+    notificationDetails: const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'family_alerts',
+        'Family safety alerts',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+    ),
+  );
+}
 
 class ParentPush {
   static String status = 'Notifications not enabled';
@@ -48,6 +78,27 @@ class ParentPush {
         status = 'Notifications denied in Android Settings';
         return;
       }
+      FirebaseMessaging.onBackgroundMessage(parentBackgroundMessage);
+      // Background check: SOS, low battery and other alerts are also read
+      // from the server every 15 minutes while the app is closed.
+      try {
+        await ZoneAlerts.setPushAlerts(true);
+        await ZoneAlerts.pollExtra(silent: true);
+      } catch (_) {}
+      // Safe-zone entry and exit alerts are on by default. They stay off only
+      // if the owner turned the switch off in Settings.
+      try {
+        if (await FamilyApi.storage.read(key: 'zoneAlertsEnabled') == null &&
+            !ZoneAlerts.changing) {
+          final list = await FamilyApi.request('/api/devices') as List;
+          await ZoneAlerts.enable(
+            list
+                .whereType<Map>()
+                .map((c) => Map<String, dynamic>.from(c))
+                .toList(),
+          );
+        }
+      } catch (_) {}
       token = await FirebaseMessaging.instance.getToken();
       if (token == null) {
         status = 'Could not register notifications';
@@ -91,6 +142,7 @@ class ParentPush {
           ),
         );
       });
+      await BackgroundHealth.askOnce();
     } catch (_) {
       status =
           'Could not register push. Check network and Google Play services.';
@@ -98,6 +150,9 @@ class ParentPush {
   }
 
   static Future<void> disable() async {
+    try {
+      await ZoneAlerts.setPushAlerts(false);
+    } catch (_) {}
     if (token != null) {
       await FamilyApi.request(
         '/api/alerts/token',
