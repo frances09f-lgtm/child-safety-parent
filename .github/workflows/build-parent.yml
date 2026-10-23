@@ -50,3 +50,34 @@ jobs:
           test "$(sed -n 's/^version: //p' pubspec.yaml)" = '1.4.11+16'
           cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/ChildSafetyParent.apk"
           gh release create v1.4.11 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.11' --notes 'New bottom bar (option A): a floating pill dock with an icon and a label on each tab and a green pill on the selected tab. UI only. Login, API calls and refresh logic unchanged. Signed ARM64 APK after successful static analysis and tests. No phone testing claimed.'
+      - name: Update update-feed (child-safety-updates)
+        env:
+          FEED_TOKEN: ${{ secrets.UPDATES_FEED_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ -z "$FEED_TOKEN" ]; then
+            echo "::warning::UPDATES_FEED_TOKEN secret is not set, so version.json in child-safety-updates was not updated"
+            exit 0
+          fi
+          VER="$(sed -n 's/^version: //p' pubspec.yaml | cut -d+ -f1)"
+          NOTES="$(gh release view "v$VER" --repo "$GITHUB_REPOSITORY" --json body --jq .body)"
+          git clone "https://x-access-token:${FEED_TOKEN}@github.com/frances09f-lgtm/child-safety-updates.git" "$RUNNER_TEMP/feed"
+          cd "$RUNNER_TEMP/feed"
+          VER="$VER" NOTES="$NOTES" REPO="$GITHUB_REPOSITORY" python3 - <<'PY'
+          import json, os
+          p = 'version.json'
+          d = json.load(open(p))
+          v = os.environ['VER']
+          d['parent'] = {
+              'version': v,
+              'notes': os.environ['NOTES'],
+              'apk': 'https://github.com/%s/releases/download/v%s/ChildSafetyParent.apk' % (os.environ['REPO'], v),
+          }
+          open(p, 'w').write(json.dumps(d, indent=2, ensure_ascii=False) + '\n')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --quiet; then echo "feed already current"; exit 0; fi
+          git commit -am "parent $VER: update feed from release"
+          git push origin HEAD:main
