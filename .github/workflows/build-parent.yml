@@ -5,6 +5,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -32,3 +34,10 @@ jobs:
         with:
           name: child-safety-parent-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+      - name: Publish green v1.4.9 APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/ChildSafetyParent.apk"
+          gh release create v1.4.9 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Child Safety Parent v1.4.9" --notes "Approved parent UI redesign with green home launcher icon. Signed ARM64 Android APK built after successful analysis and tests. No phone testing claimed."
