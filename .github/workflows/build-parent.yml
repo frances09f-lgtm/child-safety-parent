@@ -24,9 +24,9 @@ jobs:
         run: |
           set -euo pipefail
           if test -f tools/apply_parent_redesign.py; then
-            python3 tools/apply_parent_redesign.py
+            python3 tools/prepare_parent_design.py
             dart format lib/main.dart lib/pally.dart lib/activity.dart lib/update/app_update.dart lib/live/bug_report.dart
-            git rm tools/apply_parent_redesign.py
+            git rm tools/apply_parent_redesign.py tools/prepare_parent_design.py
             git add lib pubspec.yaml
             git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'parent: real draft-matched Flutter screens 1.4.10'
             git push origin HEAD:master
