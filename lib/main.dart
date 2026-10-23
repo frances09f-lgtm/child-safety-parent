@@ -1,4 +1,5 @@
 import 'update/app_update.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -7,18 +8,27 @@ import 'package:latlong2/latlong.dart';
 import 'package:intl/intl.dart';
 
 import 'api.dart';
+import 'pally.dart';
 import 'detail_reports.dart';
 import 'push.dart';
 import 'zone_alerts.dart';
 import 'activity.dart';
 
-const green = Color(0xff16a34a);
-Color get ink => ParentTheme.dark.value ? Color(0xffe2e8f0) : Color(0xff0f172a);
+const green = Color(0xff2f6b5e);
+Color get ink => ParentTheme.dark.value ? Color(0xffe9f1ec) : Color(0xff14201b);
 Color get muted =>
-    ParentTheme.dark.value ? Color(0xff94a3b8) : Color(0xff64748b);
+    ParentTheme.dark.value ? Color(0xff9aa8a2) : Color(0xff5c6b63);
 Color get pale =>
-    ParentTheme.dark.value ? Color(0xff0b1220) : Color(0xfff1f5f9);
-Color get surface => ParentTheme.dark.value ? Color(0xff172235) : Colors.white;
+    ParentTheme.dark.value ? Color(0xff0b0f10) : Color(0xfff3f6f1);
+Color get surface => ParentTheme.dark.value ? Color(0xff141a1b) : Colors.white;
+Color get edge =>
+    ParentTheme.dark.value ? Color(0xff24312e) : Color(0xffdce5dd);
+Color get soft =>
+    ParentTheme.dark.value ? Color(0xff17332c) : Color(0xffdcebe4);
+Color get onSoft =>
+    ParentTheme.dark.value ? Color(0xffb9efe0) : Color(0xff1c4238);
+Color get accent => ParentTheme.dark.value ? Color(0xff8fd8c2) : green;
+Color get onAccent => ParentTheme.dark.value ? Color(0xff06201a) : Colors.white;
 
 class ParentTheme {
   static final dark = ValueNotifier(false);
@@ -85,6 +95,20 @@ class _ParentAppState extends State<ParentApp> {
       title: 'Child Safety Parent',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Inter',
+        colorScheme:
+            ColorScheme.fromSeed(
+              seedColor: accent,
+              brightness: dark ? Brightness.dark : Brightness.light,
+            ).copyWith(
+              primary: accent,
+              onPrimary: onAccent,
+              surface: surface,
+              onSurface: ink,
+              outline: edge,
+            ),
+        scaffoldBackgroundColor: pale,
         dialogTheme: DialogThemeData(
           backgroundColor: surface,
           surfaceTintColor: Colors.transparent,
@@ -93,62 +117,61 @@ class _ParentAppState extends State<ParentApp> {
           ),
           titleTextStyle: TextStyle(
             color: ink,
+            fontFamily: 'Space Grotesk',
             fontSize: 22,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
           contentTextStyle: TextStyle(color: muted, fontSize: 14, height: 1.45),
           insetPadding: EdgeInsets.all(20),
         ),
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: green,
-          brightness: dark ? Brightness.dark : Brightness.light,
-        ),
-        scaffoldBackgroundColor: pale,
         appBarTheme: AppBarTheme(
           backgroundColor: surface,
           surfaceTintColor: Colors.transparent,
           titleTextStyle: TextStyle(
             color: ink,
+            fontFamily: 'Space Grotesk',
             fontSize: 16,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
         cardTheme: CardThemeData(
           color: surface,
           surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: edge),
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: ParentTheme.dark.value
-              ? Color(0xff1e293b)
-              : Color(0xfff8fafc),
-          contentPadding: EdgeInsets.all(14),
+          fillColor: pale,
+          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          labelStyle: TextStyle(fontSize: 13, color: muted),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(
-              color: ParentTheme.dark.value
-                  ? Color(0xff334155)
-                  : Color(0xffe2e8f0),
-            ),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: edge),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(
-              color: ParentTheme.dark.value
-                  ? Color(0xff334155)
-                  : Color(0xffe2e8f0),
-            ),
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: edge),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: accent, width: 2),
           ),
         ),
         filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-            backgroundColor: green,
-            foregroundColor: Colors.white,
+            backgroundColor: accent,
+            foregroundColor: onAccent,
             minimumSize: Size.fromHeight(48),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+            textStyle: TextStyle(
+              fontFamily: 'Space Grotesk',
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
             ),
+            shape: StadiumBorder(),
           ),
         ),
       ),
@@ -157,17 +180,12 @@ class _ParentAppState extends State<ParentApp> {
   );
 }
 
-Widget panel(List<Widget> children, {double radius = 18}) => Container(
-  padding: EdgeInsets.all(16),
+Widget panel(List<Widget> children, {double radius = 24}) => Container(
+  padding: EdgeInsets.all(18),
   decoration: BoxDecoration(
     color: surface,
     borderRadius: BorderRadius.circular(radius),
-    border: Border.all(
-      color: ParentTheme.dark.value ? Color(0xff334155) : Color(0xffe2e8f0),
-    ),
-    boxShadow: [
-      BoxShadow(color: Color(0x09000000), blurRadius: 3, offset: Offset(0, 2)),
-    ],
+    border: Border.all(color: edge),
   ),
   child: Material(
     color: Colors.transparent,
@@ -356,8 +374,7 @@ class _FamilyHomeState extends State<FamilyHome> {
     } catch (_) {
       if (mounted)
         setState(
-          () => error =
-              'Could not refresh. These are the last received reports, not live data.',
+          () => error = 'Could not refresh. These are the last received reports, not live data.',
         );
     } finally {
       if (mounted) setState(() => busy = false);
@@ -446,8 +463,7 @@ class _FamilyHomeState extends State<FamilyHome> {
         newPass.text != confirmPass.text ||
         newPass.text == oldPass.text) {
       setState(
-        () => error =
-            'Use a different password with at least 8 characters and matching confirmation.',
+        () => error = 'Use a different password with at least 8 characters and matching confirmation.',
       );
       return;
     }
@@ -470,56 +486,37 @@ class _FamilyHomeState extends State<FamilyHome> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: signed ? pale : ink,
+    backgroundColor: pale,
     appBar: !signed
         ? null
-        : AppBar(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  section == 0 ? 'Your Family' : 'Parent Account Settings',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                ),
-                if (section == 0)
-                  Text(
-                    '${children.length} protected devices connected',
-                    style: TextStyle(fontSize: 11, color: muted),
-                  ),
-              ],
-            ),
+        : SafetyHeader(
+            title: section == 0 ? 'Your Family' : 'Settings',
+            subtitle: section == 0
+                ? '\${children.length} protected devices connected'
+                : null,
             actions: section == 0
                 ? [
                     IconButton(
                       tooltip: 'Refresh reports',
                       onPressed: busy ? null : refresh,
-                      icon: Icon(Icons.refresh),
+                      icon: Icon(Icons.refresh, color: muted),
                     ),
                     IconButton(
                       tooltip: 'Settings',
                       onPressed: () => setState(() => section = 1),
-                      icon: Icon(Icons.settings_outlined),
+                      icon: Icon(Icons.settings_outlined, color: muted),
                     ),
                   ]
-                : null,
+                : const [],
           ),
     bottomNavigationBar: !signed
         ? null
-        : BottomNavigationBar(
-            backgroundColor: surface,
-            selectedItemColor: green,
-            unselectedItemColor: Color(0xff94a3b8),
-            currentIndex: section,
+        : SafetyDock(
+            index: section,
             onTap: (v) => setState(() => section = v),
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.family_restroom),
-                label: 'Children',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.settings),
-                label: 'Settings',
-              ),
+            items: const [
+              SafetyDockItem(Icons.family_restroom, 'Children'),
+              SafetyDockItem(Icons.settings, 'Settings'),
             ],
           ),
     body: !ready
@@ -566,40 +563,37 @@ class _FamilyHomeState extends State<FamilyHome> {
             padding: EdgeInsets.all(24),
             child: Column(
               children: [
-                SizedBox(height: 40),
+                SizedBox(height: 32),
                 Container(
-                  width: 64,
-                  height: 64,
+                  width: 72,
+                  height: 72,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [green, Color(0xff22c55e)],
-                    ),
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(color: Color(0x4022c55e), blurRadius: 30),
-                    ],
+                    color: soft,
+                    shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.shield, color: Colors.white, size: 32),
+                  child: Icon(Icons.shield_outlined, color: onSoft, size: 34),
                 ),
-                SizedBox(height: 18),
-                pill('CHILD SAFETY PARENT', color: Color(0xff34d399)),
+                SizedBox(height: 16),
+                pill('CHILD SAFETY PARENT', color: accent),
                 SizedBox(height: 12),
                 Text(
                   'Parent Portal',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 26,
-                    fontWeight: FontWeight.w800,
+                    fontFamily: 'Space Grotesk',
+                    color: ink,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -.98,
                   ),
                 ),
                 SizedBox(height: 6),
                 Text(
                   'Your family monitoring companion',
-                  style: TextStyle(color: Color(0xff94a3b8), fontSize: 12),
+                  style: TextStyle(color: muted, fontSize: 13),
                 ),
-                SizedBox(height: 56),
+                SizedBox(height: 40),
                 darkField('EMAIL FIELD', email, Icons.email_outlined),
-                SizedBox(height: 18),
+                SizedBox(height: 16),
                 darkField(
                   'PASSWORD FIELD',
                   password,
@@ -615,17 +609,14 @@ class _FamilyHomeState extends State<FamilyHome> {
                     ),
                     Text(
                       'Remember 30 days',
-                      style: TextStyle(color: Color(0xff94a3b8), fontSize: 11),
+                      style: TextStyle(color: muted, fontSize: 11),
                     ),
                     Spacer(),
                     TextButton(
                       onPressed: resetPassword,
                       child: Text(
                         'Forgot password?',
-                        style: TextStyle(
-                          color: Color(0xff34d399),
-                          fontSize: 11,
-                        ),
+                        style: TextStyle(color: accent, fontSize: 11),
                       ),
                     ),
                   ],
@@ -647,7 +638,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                 Theme(
                   data: Theme.of(context).copyWith(
                     textTheme: Theme.of(context).textTheme
-                        .apply(bodyColor: Color(0xff94a3b8)),
+                        .apply(bodyColor: muted),
                   ),
                   child: ExpansionTile(
                     iconColor: muted,
@@ -673,9 +664,9 @@ class _FamilyHomeState extends State<FamilyHome> {
                 ),
                 if (error.isNotEmpty)
                   Text(error, style: TextStyle(color: Colors.redAccent)),
-                SizedBox(height: 40),
+                SizedBox(height: 32),
                 Text(
-                  'Firebase sign-in • Password is not saved',
+                  'Firebase sign-in - Password is not saved',
                   style: TextStyle(color: muted, fontSize: 11),
                 ),
               ],
@@ -696,7 +687,7 @@ class _FamilyHomeState extends State<FamilyHome> {
       Text(
         title,
         style: TextStyle(
-          color: Color(0xff94a3b8),
+          color: muted,
           fontSize: 11,
           fontWeight: FontWeight.w700,
           letterSpacing: .5,
@@ -709,14 +700,9 @@ class _FamilyHomeState extends State<FamilyHome> {
         keyboardType: secret
             ? TextInputType.visiblePassword
             : TextInputType.text,
-        style: TextStyle(color: Colors.white, fontSize: 13),
+        style: TextStyle(color: ink, fontSize: 14),
         decoration: InputDecoration(
-          fillColor: Color(0xff1e293b),
           prefixIcon: Icon(icon, color: muted, size: 18),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: Color(0xff334155)),
-          ),
         ),
       ),
     ],
@@ -795,7 +781,7 @@ class _FamilyHomeState extends State<FamilyHome> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: Color(0xffdcfce7),
+                color: soft,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(Icons.person, color: green),
@@ -875,8 +861,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                       await ZoneAlerts.disable();
                     }
                   } catch (_) {
-                    ZoneAlerts.status =
-                        'Could not save notification settings. Restart and retry.';
+                    ZoneAlerts.status = 'Could not save notification settings. Restart and retry.';
                   } finally {
                     progress.cancel();
                     ZoneAlerts.changing = false;
@@ -966,8 +951,10 @@ class _FamilyHomeState extends State<FamilyHome> {
               await ZoneAlerts.disableAll();
               await FamilyApi.logout();
             } catch (_) {
-              if (mounted) setState(() => error =
-                'Could not finish logout. You are still signed in; automatic refresh remains on. Retry when connected.');
+              if (mounted)
+                setState(
+                  () => error = 'Could not finish logout. You are still signed in; automatic refresh remains on. Retry when connected.',
+                );
               return;
             }
             timer?.cancel();
@@ -1052,12 +1039,12 @@ class _FamilyHomeState extends State<FamilyHome> {
         margin: EdgeInsets.symmetric(horizontal: 3),
         decoration: BoxDecoration(
           color: accent
-              ? (ParentTheme.dark.value ? Color(0xff163629) : Color(0xfff0fdf4))
+              ? (ParentTheme.dark.value ? soft : soft)
               : ParentTheme.dark.value
-              ? Color(0xff1e293b)
-              : Color(0xfff8fafc),
+              ? pale
+              : pale,
           borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: accent ? Color(0xffdcfce7) : pale),
+          border: Border.all(color: accent ? soft : pale),
         ),
         child: Column(
           children: [
@@ -1065,7 +1052,7 @@ class _FamilyHomeState extends State<FamilyHome> {
               a,
               style: TextStyle(
                 fontSize: 9,
-                color: accent ? green : Color(0xff94a3b8),
+                color: accent ? green : muted,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -1226,8 +1213,8 @@ class _FamilyHomeState extends State<FamilyHome> {
                 decoration: BoxDecoration(
                   color: events.isEmpty
                       ? ParentTheme.dark.value
-                            ? Color(0xff1e293b)
-                            : Color(0xfff8fafc)
+                            ? pale
+                            : pale
                       : (ParentTheme.dark.value
                             ? Color(0xff3a2b18)
                             : Color(0xfffffbeb)),
@@ -1563,8 +1550,7 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.childsafety.parent',
                           ),
                           if (selected != null)
@@ -1627,8 +1613,7 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                     metres > 10000 ||
                     selected == null) {
                   setDialog(
-                    () => formError =
-                        'Choose a centre, a name, and radius from 100 to 10,000 metres.',
+                    () => formError = 'Choose a centre, a name, and radius from 100 to 10,000 metres.',
                   );
                   return;
                 }
@@ -1799,7 +1784,9 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                         child: Stack(
                           children: [
                             MiniMap(
-                              key: ValueKey('route-$playing-$playIndex-${playing ? '' : current}'),
+                              key: ValueKey(
+                                'route-$playing-$playIndex-${playing ? '' : current}',
+                              ),
                               points: shown,
                               fresh: !playing && live,
                               zones: safe,
@@ -1978,9 +1965,7 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                                 Container(
                                   padding: EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: ParentTheme.dark.value
-                                        ? Color(0xff163629)
-                                        : Color(0xffecfdf5),
+                                    color: ParentTheme.dark.value ? soft : soft,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(

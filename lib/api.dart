@@ -11,7 +11,11 @@ class FamilyApi {
   // configuration, not a secret. Pre-filled so sign-in never asks for it;
   // the field stays editable for project moves.
   static const defaultKey = 'AIzaSyCh-l1is7a-wMWZGhHWUnh9rV0BkdvADbk';
-  static String server = '', key = defaultKey, email = '', _token = '', _refresh = '';
+  static String server = '',
+      key = defaultKey,
+      email = '',
+      _token = '',
+      _refresh = '';
   static bool _remember = true;
   static DateTime _expires = DateTime(2000);
   static Future<bool> restore() async {

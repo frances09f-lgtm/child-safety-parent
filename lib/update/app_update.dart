@@ -19,7 +19,8 @@ const kAppName = 'Child Safety';
 const kUpdateRepo = '-';
 // Feed mode (for apps whose source repo is private): public JSON file with
 // {"<kFeedKey>": {"version": "...", "notes": "...", "apk": "..."}}.
-const kUpdateFeedUrl = 'https://raw.githubusercontent.com/frances09f-lgtm/child-safety-updates/main/version.json'; // empty = GitHub releases mode
+const kUpdateFeedUrl =
+    'https://raw.githubusercontent.com/frances09f-lgtm/child-safety-updates/main/version.json'; // empty = GitHub releases mode
 const kFeedKey = 'parent';
 // -------------------------------------------------------------------------
 
@@ -294,9 +295,8 @@ Future<void> checkUpdateManually(
   final info = await c.fetchLatest();
   if (!context.mounted) return;
   if (info == null) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('No update available')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('No update available')));
     return;
   }
   await showUpdateDialog(context, info, checker: c);
@@ -395,16 +395,13 @@ class _UpdateDialogState extends State<_UpdateDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Center(
-            child: Text(
-              switch (phase) {
-                _Phase.available => '$kAppName $v is available',
-                _Phase.downloading => 'Downloading $kAppName $v...',
-                _Phase.needsPermission => 'One permission needed',
-                _Phase.installing => 'Opening installer...',
-                _Phase.error => 'Update failed',
-              },
-              style: const TextStyle(color: dim, fontSize: 13),
-            ),
+            child: Text(switch (phase) {
+              _Phase.available => '$kAppName $v is available',
+              _Phase.downloading => 'Downloading $kAppName $v...',
+              _Phase.needsPermission => 'One permission needed',
+              _Phase.installing => 'Opening installer...',
+              _Phase.error => 'Update failed',
+            }, style: const TextStyle(color: dim, fontSize: 13)),
           ),
           if (phase == _Phase.downloading) ...[
             const SizedBox(height: 12),

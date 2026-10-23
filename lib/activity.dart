@@ -4,11 +4,11 @@ import 'package:intl/intl.dart';
 import 'api.dart';
 import 'main.dart' show ParentTheme, surface;
 
-const _green = Color(0xff16a34a);
+const _green = Color(0xff2f6b5e);
 Color get _ink =>
-    ParentTheme.dark.value ? Color(0xffe2e8f0) : Color(0xff0f172a);
+    ParentTheme.dark.value ? Color(0xffe9f1ec) : Color(0xff14201b);
 Color get _muted =>
-    ParentTheme.dark.value ? Color(0xff94a3b8) : Color(0xff64748b);
+    ParentTheme.dark.value ? Color(0xff9aa8a2) : Color(0xff5c6b63);
 
 String _dur(num? ms) {
   if (ms == null) return 'Unavailable';
@@ -18,9 +18,8 @@ String _dur(num? ms) {
 
 String _clock(num? ms) => ms == null
     ? '-'
-    : DateFormat(
-        'h:mm a',
-      ).format(DateTime.fromMillisecondsSinceEpoch(ms.toInt()));
+    : DateFormat('h:mm a')
+          .format(DateTime.fromMillisecondsSinceEpoch(ms.toInt()));
 
 /// Phone Activity tab: counts reported by the child's phone (screen time, unlocks, app usage...).
 class ActivityTab extends StatefulWidget {
