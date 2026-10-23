@@ -18,8 +18,9 @@ String _dur(num? ms) {
 
 String _clock(num? ms) => ms == null
     ? '-'
-    : DateFormat('h:mm a')
-          .format(DateTime.fromMillisecondsSinceEpoch(ms.toInt()));
+    : DateFormat(
+        'h:mm a',
+      ).format(DateTime.fromMillisecondsSinceEpoch(ms.toInt()));
 
 /// Phone Activity tab: counts reported by the child's phone (screen time, unlocks, app usage...).
 class ActivityTab extends StatefulWidget {

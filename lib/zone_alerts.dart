@@ -249,8 +249,9 @@ class ZoneAlerts {
   }
 
   static Future<void> speedLocked(bool baseline) async {
-    final config = await FamilyApi.request('/api/alerts')
-        .timeout(const Duration(seconds: 20));
+    final config = await FamilyApi.request(
+      '/api/alerts',
+    ).timeout(const Duration(seconds: 20));
     final events =
         (config['alerts'] as List? ?? [])
             .whereType<Map>()
@@ -258,8 +259,9 @@ class ZoneAlerts {
             .toList()
           ..sort((a, b) => (a['id'] as num).compareTo(b['id'] as num));
     final directory = await getApplicationSupportDirectory();
-    final file = await File('${directory.path}/zone-alert.lock')
-        .open(mode: FileMode.append);
+    final file = await File(
+      '${directory.path}/zone-alert.lock',
+    ).open(mode: FileMode.append);
     await file.lock(FileLock.exclusive);
     try {
       final key = 'speedCursor:${accountKey()}';
@@ -328,8 +330,9 @@ class ZoneAlerts {
   }) async {
     if (kIsWeb || (!baseline && !await isEnabled())) return;
     final directory = await getApplicationSupportDirectory();
-    final file = await File('${directory.path}/zone-alert.lock')
-        .open(mode: FileMode.append);
+    final file = await File(
+      '${directory.path}/zone-alert.lock',
+    ).open(mode: FileMode.append);
     await file.lock(FileLock.exclusive);
     try {
       final key = 'zoneCursor:${accountKey()}:${child['deviceId']}';

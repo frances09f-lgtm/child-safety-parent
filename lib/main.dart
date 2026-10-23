@@ -1095,14 +1095,14 @@ class _FamilyHomeState extends State<FamilyHome> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: green,
+                      color: accent,
                       borderRadius: BorderRadius.circular(17),
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       name.isEmpty ? '?' : name[0].toUpperCase(),
                       style: TextStyle(
-                        color: surface,
+                        color: onAccent,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),

@@ -295,8 +295,9 @@ Future<void> checkUpdateManually(
   final info = await c.fetchLatest();
   if (!context.mounted) return;
   if (info == null) {
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('No update available')));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('No update available')));
     return;
   }
   await showUpdateDialog(context, info, checker: c);
