@@ -231,6 +231,7 @@ class FamilyHome extends StatefulWidget {
 }
 
 class _FamilyHomeState extends State<FamilyHome> {
+  String childSearch = '';
   bool ready = false, signed = false, busy = false;
   String error = '';
   int section = 0;
@@ -536,6 +537,28 @@ class _FamilyHomeState extends State<FamilyHome> {
                 if (busy) LinearProgressIndicator(),
                 if (error.isNotEmpty)
                   Text(error, style: TextStyle(color: Colors.red)),
+                if (children.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 14),
+                    child: TextField(
+                      onChanged: (v) => setState(() => childSearch = v),
+                      decoration: InputDecoration(
+                        hintText: 'Search children',
+                        prefixIcon: Icon(Icons.search, color: muted, size: 20),
+                        isDense: true,
+                        filled: true,
+                        fillColor: surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(999),
+                          borderSide: BorderSide(color: edge),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(999),
+                          borderSide: BorderSide(color: edge),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (children.isEmpty && !busy)
                   panel([
                     Text('No paired child phones yet'),
@@ -545,7 +568,13 @@ class _FamilyHomeState extends State<FamilyHome> {
                       style: TextStyle(color: muted),
                     ),
                   ]),
-                for (final child in children) childCard(child),
+                for (final child in children.where((c) {
+                  final q = childSearch.trim().toLowerCase();
+                  if (q.isEmpty) return true;
+                  return '${c['name']}'.toLowerCase().contains(q) ||
+                      '${c['deviceId']}'.toLowerCase().contains(q);
+                }))
+                  childCard(child),
                 Padding(
                   padding: EdgeInsets.all(12),
                   child: Text(
@@ -1125,7 +1154,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                               ),
                             ),
                             pill(
-                              live ? 'Live' : 'Last Known',
+                              live ? 'Live' : 'Last known',
                               color: live ? green : muted,
                             ),
                           ],
@@ -1189,14 +1218,17 @@ class _FamilyHomeState extends State<FamilyHome> {
                 ),
               ),
               SizedBox(height: 12),
-              if (p != null && !live)
-                Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Last GPS fix: ${stamp(location?['fixAt'])}. Not current location.',
-                    style: TextStyle(fontSize: 11, color: muted),
-                  ),
+              Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text(
+                  live
+                      ? 'Updated while the dashboard is open.'
+                      : p == null
+                      ? 'No GPS fix reported yet.'
+                      : 'Last known location • ${stamp(location?['fixAt'])}',
+                  style: TextStyle(fontSize: 11, color: muted),
                 ),
+              ),
               Row(
                 children: [
                   stat('BATTERY', '${latest?['battery'] ?? '--'}%'),
@@ -1204,10 +1236,10 @@ class _FamilyHomeState extends State<FamilyHome> {
                   stat(
                     'STATUS',
                     live
-                        ? 'Live GPS'
+                        ? 'Live'
                         : p == null
                         ? 'No GPS fix'
-                        : 'Last known',
+                        : 'Stale',
                     accent: live,
                   ),
                 ],
