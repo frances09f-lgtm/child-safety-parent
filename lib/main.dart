@@ -14,6 +14,7 @@ import 'push.dart';
 import 'zone_alerts.dart';
 import 'background_health.dart';
 import 'history_today.dart';
+import 'zone_status.dart';
 import 'activity.dart';
 import 'live/bug_report.dart';
 
@@ -1135,7 +1136,6 @@ class _FamilyHomeState extends State<FamilyHome> {
     final latest = child['latest'] as Map<String, dynamic>?;
     final location = child['locationFix'] as Map<String, dynamic>? ?? latest;
     final p = point(location);
-    final events = child['zonesData']?['events'] as List? ?? [];
     final live = fresh(latest) && error.isEmpty;
     final name = child['childName']?.toString() ?? 'Child';
     final sos = latest?['emergency'] == true;
@@ -1300,27 +1300,33 @@ class _FamilyHomeState extends State<FamilyHome> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: events.isEmpty ? tonal : amber,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Text(
-                      events.isEmpty
-                          ? 'No zone alerts yet'
-                          : 'Zone Alert: ${events.first['entered'] == true ? 'Entered' : 'Left'} ${events.first['zoneName']} • ${stamp(events.first['fixAt'])}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: events.isEmpty ? muted : onAmber,
-                      ),
-                    ),
+                  Builder(
+                    builder: (_) {
+                      final zs = zoneStatus(child['zonesData']);
+                      if (zs == null) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: zs.recent ? amber : tonal,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            zs.text,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: zs.recent ? onAmber : muted,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
