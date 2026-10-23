@@ -183,10 +183,13 @@ class SafetyHeader extends StatelessWidget implements PreferredSizeWidget {
 
 class SafetyDockItem {
   final IconData icon;
+  final IconData? activeIcon;
   final String label;
-  const SafetyDockItem(this.icon, this.label);
+  const SafetyDockItem(this.icon, this.label, {this.activeIcon});
 }
 
+// Option A bottom bar: floating pill, icon plus label on every tab,
+// green pill highlight on the selected tab.
 class SafetyDock extends StatelessWidget {
   final int index;
   final ValueChanged<int> onTap;
@@ -199,43 +202,54 @@ class SafetyDock extends StatelessWidget {
   });
   Widget item(int i) {
     final active = i == index;
+    final it = items[i];
+    final fg = active ? onAccent : muted;
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 3),
         child: Semantics(
           selected: active,
           button: true,
-          label: items[i].label,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(999),
-            onTap: () => onTap(i),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 260),
-              decoration: BoxDecoration(
-                color: active ? accent : Colors.transparent,
-                borderRadius: BorderRadius.circular(active ? 999 : 18),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    items[i].icon,
-                    size: 19,
-                    color: active ? onAccent : muted,
-                  ),
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      items[i].label,
-                      style: TextStyle(
-                        fontFamily: 'Space Grotesk',
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: active ? onAccent : muted,
+          label: it.label,
+          excludeSemantics: true,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 240),
+            curve: Curves.easeOutCubic,
+            decoration: BoxDecoration(
+              color: active ? accent : Colors.transparent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: () => onTap(i),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        active ? (it.activeIcon ?? it.icon) : it.icon,
+                        size: 22,
+                        color: fg,
                       ),
-                    ),
+                      const SizedBox(height: 2),
+                      Text(
+                        it.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'Space Grotesk',
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
+                          color: fg,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -249,9 +263,9 @@ class SafetyDock extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
         child: Container(
-          height: 62,
+          height: 68,
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: surface,
