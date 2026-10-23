@@ -49,7 +49,7 @@ jobs:
           set -euo pipefail
           test "$(sed -n 's/^version: //p' pubspec.yaml)" = '1.4.15+20'
           cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/ChildSafetyParent.apk"
-          gh release create v1.4.15 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.15' --notes 'Adds 32-bit ARM support. Previous APKs lacked the 32-bit Flutter engine and app library; this may explain launch failure on 32-bit Android. All features and screens are unchanged from v1.4.14 (source diff: workflow and version only). Redmi 7A retest pending. Signed ARM + ARM64 APK after successful static analysis and tests. No phone testing claimed.'
+          gh release create v1.4.15 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.15' --notes 'Adds 32-bit ARM support. Previous APKs lacked the 32-bit Flutter engine and app library; this may explain launch failure on 32-bit Android. All features and screens are unchanged from v1.4.14 (source diff: build and version files only). Redmi 7A retest pending. Signed ARM + ARM64 APK after successful static analysis and tests. No phone testing claimed.'
       - name: Update update-feed (child-safety-updates)
         env:
           FEED_TOKEN: ${{ secrets.UPDATES_FEED_TOKEN }}
