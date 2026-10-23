@@ -12,6 +12,7 @@ import 'pally.dart';
 import 'detail_reports.dart';
 import 'push.dart';
 import 'zone_alerts.dart';
+import 'history_today.dart';
 import 'activity.dart';
 import 'live/bug_report.dart';
 
@@ -1978,14 +1979,14 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                       ),
                       const SizedBox(height: 14),
                       panel([
-                        draftTitle('Recent fixes'),
+                        draftTitle('Recent history'),
                         const SizedBox(height: 10),
-                        if (ordered.isEmpty)
+                        if (todayHistory(ordered).isEmpty)
                           Text(
-                            'No recorded fixes yet',
+                            'No history today',
                             style: TextStyle(color: muted),
                           ),
-                        for (final h in ordered.reversed)
+                        for (final h in todayHistory(ordered))
                           draftHistoryRow(
                             stamp(h['fixAt']),
                             h['city']?.toString() ?? 'Recorded location',
