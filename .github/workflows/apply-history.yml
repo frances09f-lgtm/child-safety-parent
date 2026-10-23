@@ -1,0 +1,19 @@
+name: Apply history-today change
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply patch
+        run: python3 tools/apply_history_today.py
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add lib test pubspec.yaml
+          git commit -m 'Recent history: show only today (India time), bump to 1.4.12'
+          git push origin HEAD:master
