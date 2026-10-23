@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'api.dart';
-import 'main.dart' show ParentTheme, surface;
+import 'main.dart' show ParentTheme, surface, accent, tonal, edge;
 
-const _green = Color(0xff2f6b5e);
+Color get _green => accent;
 Color get _ink =>
     ParentTheme.dark.value ? Color(0xffe9f1ec) : Color(0xff14201b);
 Color get _muted =>
@@ -18,9 +18,8 @@ String _dur(num? ms) {
 
 String _clock(num? ms) => ms == null
     ? '-'
-    : DateFormat(
-        'h:mm a',
-      ).format(DateTime.fromMillisecondsSinceEpoch(ms.toInt()));
+    : DateFormat('h:mm a')
+          .format(DateTime.fromMillisecondsSinceEpoch(ms.toInt()));
 
 /// Phone Activity tab: counts reported by the child's phone (screen time, unlocks, app usage...).
 class ActivityTab extends StatefulWidget {
@@ -96,10 +95,11 @@ class _ActivityTabState extends State<ActivityTab> {
   Widget _card(String title, Widget child) => Container(
     width: double.infinity,
     margin: EdgeInsets.only(bottom: 12),
-    padding: EdgeInsets.all(14),
+    padding: EdgeInsets.all(18),
     decoration: BoxDecoration(
       color: surface,
-      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: edge),
+      borderRadius: BorderRadius.circular(24),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,8 +123,8 @@ class _ActivityTabState extends State<ActivityTab> {
       margin: EdgeInsets.all(3),
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: _green.withValues(alpha: .08),
-        borderRadius: BorderRadius.circular(12),
+        color: tonal,
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -137,7 +137,7 @@ class _ActivityTabState extends State<ActivityTab> {
               color: _ink,
             ),
           ),
-          Text(t, style: TextStyle(fontSize: 10, color: _muted)),
+          Text(t, style: TextStyle(fontSize: 13, color: _muted)),
         ],
       ),
     ),
@@ -145,7 +145,7 @@ class _ActivityTabState extends State<ActivityTab> {
 
   Widget _empty(String t) => Padding(
     padding: EdgeInsets.symmetric(vertical: 6),
-    child: Text(t, style: TextStyle(fontSize: 12, color: _muted)),
+    child: Text(t, style: TextStyle(fontSize: 13, color: _muted)),
   );
 
   @override
@@ -154,7 +154,7 @@ class _ActivityTabState extends State<ActivityTab> {
     return RefreshIndicator(
       onRefresh: load,
       child: ListView(
-        padding: EdgeInsets.all(12),
+        padding: EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
           if (error.isNotEmpty)
             Text(error, style: TextStyle(color: Colors.red)),
@@ -163,13 +163,27 @@ class _ActivityTabState extends State<ActivityTab> {
             runSpacing: 8,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Text('Range', style: TextStyle(fontSize: 12, color: _muted)),
+              Text('Range', style: TextStyle(fontSize: 13, color: _muted)),
               SizedBox(width: 8),
               for (final r in [7, 14, 30])
                 Padding(
                   padding: EdgeInsets.only(right: 6),
                   child: ChoiceChip(
-                    label: Text('$r days', style: TextStyle(fontSize: 11)),
+                    label: Text('$r days'),
+                    selectedColor: _green,
+                    showCheckmark: false,
+                    labelStyle: TextStyle(
+                      color: range == r
+                          ? (ParentTheme.dark.value
+                                ? const Color(0xff06201a)
+                                : Colors.white)
+                          : _ink,
+                    ),
+                    shape: const StadiumBorder(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 10,
+                    ),
                     selected: range == r,
                     onSelected: (_) {
                       range = r;
@@ -181,7 +195,7 @@ class _ActivityTabState extends State<ActivityTab> {
                 lastSync == null
                     ? 'Last synced: never'
                     : 'Last synced: ${DateFormat('d MMM, h:mm a').format(DateTime.parse(lastSync!).toLocal())}',
-                style: TextStyle(fontSize: 10, color: _muted),
+                style: TextStyle(fontSize: 13, color: _muted),
               ),
             ],
           ),
@@ -216,7 +230,7 @@ class _ActivityTabState extends State<ActivityTab> {
           SizedBox(height: 20),
           Text(
             'Counts only, reported by the child phone with the family\'s consent. Messages, passwords, keystrokes, screens and notification text are never collected. A value that shows Unavailable was not provided by Android.',
-            style: TextStyle(fontSize: 10, color: _muted, height: 1.5),
+            style: TextStyle(fontSize: 13, color: _muted, height: 1.5),
           ),
         ],
       ),
@@ -251,8 +265,10 @@ class _ActivityTabState extends State<ActivityTab> {
                           .clamp(2, 80)
                           .toDouble(),
                       decoration: BoxDecoration(
-                        color: d['day'] == selected ? _ink : _green,
-                        borderRadius: BorderRadius.circular(4),
+                        color: d['day'] == selected
+                            ? _green
+                            : _green.withValues(alpha: .22),
+                        borderRadius: BorderRadius.circular(7),
                       ),
                     ),
                     SizedBox(height: 3),
@@ -379,7 +395,7 @@ class _ActivityTabState extends State<ActivityTab> {
                               child: Text(
                                 '${a['label']}',
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12),
+                                style: TextStyle(fontSize: 13),
                               ),
                             ),
                             Text(
@@ -405,7 +421,7 @@ class _ActivityTabState extends State<ActivityTab> {
                         Expanded(
                           child: Text(
                             '${c['category']}',
-                            style: TextStyle(fontSize: 12),
+                            style: TextStyle(fontSize: 13),
                           ),
                         ),
                         Text(
@@ -437,7 +453,7 @@ class _ActivityTabState extends State<ActivityTab> {
                               child: Text(
                                 '${n['label']}',
                                 overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 12),
+                                style: TextStyle(fontSize: 13),
                               ),
                             ),
                             Text(
@@ -460,12 +476,12 @@ class _ActivityTabState extends State<ActivityTab> {
               for (final e in wifi)
                 Text(
                   '${_clock(e['t'] as num)}  Wi-Fi ${e['e']}',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 13),
                 ),
               for (final e in bt)
                 Text(
                   '${_clock(e['t'] as num)}  Bluetooth ${e['e']}',
-                  style: TextStyle(fontSize: 12),
+                  style: TextStyle(fontSize: 13),
                 ),
             ],
           ),
@@ -480,7 +496,7 @@ class _ActivityTabState extends State<ActivityTab> {
                     for (final c in ch)
                       Text(
                         '${_clock(c['start'] as num?)} to ${c['end'] == null ? 'now' : _clock(c['end'] as num)}   ${c['startLevel'] ?? '?'}% to ${c['endLevel'] ?? '?'}%',
-                        style: TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 13),
                       ),
                   ],
                 ),
@@ -495,7 +511,7 @@ class _ActivityTabState extends State<ActivityTab> {
                     for (final e in ringer)
                       Text(
                         '${_clock(e['t'] as num)}  ${e['e']}',
-                        style: TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 13),
                       ),
                   ],
                 ),
@@ -510,7 +526,7 @@ class _ActivityTabState extends State<ActivityTab> {
                     for (final p in perms)
                       Text(
                         '${_clock(p['t'] as num)}  ${p['name']} ${p['granted'] == true ? 'allowed' : 'turned off'}',
-                        style: TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 13),
                       ),
                   ],
                 ),
@@ -560,28 +576,28 @@ class _ActivityTabState extends State<ActivityTab> {
         children: [
           Text(
             'Total screen time: ${_dur(screen)}${delta(screen, _sum(prev, 'screenOnMs'))}',
-            style: TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 13),
           ),
           Text(
             'Average per day: ${_dur(screen / last.length)}',
-            style: TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 13),
           ),
           Text(
             'Unlocks: ${unl.round()}${delta(unl, _sum(prev, 'unlocks'))}',
-            style: TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 13),
           ),
           Text(
             'Night-time use: ${_dur(night)}${delta(night, _sum(prev, 'nightScreenMs'))}',
-            style: TextStyle(fontSize: 12),
+            style: TextStyle(fontSize: 13),
           ),
           SizedBox(height: 6),
           Text(
             'Most-used apps',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
           ),
           if (top.isEmpty) _empty('No app usage in this period.'),
           for (final e in top.take(5))
-            Text('${e.key}: ${_dur(e.value)}', style: TextStyle(fontSize: 12)),
+            Text('${e.key}: ${_dur(e.value)}', style: TextStyle(fontSize: 13)),
         ],
       ),
     );

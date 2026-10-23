@@ -13,8 +13,18 @@ import 'detail_reports.dart';
 import 'push.dart';
 import 'zone_alerts.dart';
 import 'activity.dart';
+import 'live/bug_report.dart';
 
-const green = Color(0xff2f6b5e);
+Color get green =>
+    ParentTheme.dark.value ? const Color(0xff8fd8c2) : const Color(0xff2f6b5e);
+Color get tonal =>
+    ParentTheme.dark.value ? const Color(0xff1a2422) : const Color(0xffeaf1ea);
+Color get danger =>
+    ParentTheme.dark.value ? const Color(0xffff8a80) : const Color(0xffb3261e);
+Color get amber =>
+    ParentTheme.dark.value ? const Color(0xff2a2312) : const Color(0xfffbf1d9);
+Color get onAmber =>
+    ParentTheme.dark.value ? const Color(0xfff2d48a) : const Color(0xff6b4e12);
 Color get ink => ParentTheme.dark.value ? Color(0xffe9f1ec) : Color(0xff14201b);
 Color get muted =>
     ParentTheme.dark.value ? Color(0xff9aa8a2) : Color(0xff5c6b63);
@@ -202,15 +212,19 @@ Widget label(String text) => Padding(
     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: muted),
   ),
 );
-Widget pill(String text, {Color color = green}) => Container(
+Widget pill(String text, {Color? color}) => Container(
   padding: EdgeInsets.symmetric(horizontal: 9, vertical: 4),
   decoration: BoxDecoration(
-    color: color.withValues(alpha: .1),
+    color: (color ?? accent).withValues(alpha: .12),
     borderRadius: BorderRadius.circular(30),
   ),
   child: Text(
     text,
-    style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w700),
+    style: TextStyle(
+      fontSize: 12,
+      color: color ?? accent,
+      fontWeight: FontWeight.w600,
+    ),
   ),
 );
 String ago(dynamic value) {
@@ -375,8 +389,7 @@ class _FamilyHomeState extends State<FamilyHome> {
     } catch (_) {
       if (mounted)
         setState(
-          () => error =
-              'Could not refresh. These are the last received reports, not live data.',
+          () => error = 'Could not refresh. These are the last received reports, not live data.',
         );
     } finally {
       if (mounted) setState(() => busy = false);
@@ -465,8 +478,7 @@ class _FamilyHomeState extends State<FamilyHome> {
         newPass.text != confirmPass.text ||
         newPass.text == oldPass.text) {
       setState(
-        () => error =
-            'Use a different password with at least 8 characters and matching confirmation.',
+        () => error = 'Use a different password with at least 8 characters and matching confirmation.',
       );
       return;
     }
@@ -477,9 +489,8 @@ class _FamilyHomeState extends State<FamilyHome> {
       newPass.clear();
       confirmPass.clear();
       if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Password updated.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Password updated.')));
     } catch (e) {
       if (mounted)
         setState(() => error = e.toString().replaceFirst('Exception: ', ''));
@@ -490,28 +501,19 @@ class _FamilyHomeState extends State<FamilyHome> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    extendBody: signed,
     backgroundColor: pale,
     appBar: !signed
         ? null
         : SafetyHeader(
             title: section == 0 ? 'Your Family' : 'Settings',
-            subtitle: section == 0
-                ? '${children.length} protected devices connected'
-                : null,
-            actions: section == 0
-                ? [
-                    IconButton(
-                      tooltip: 'Refresh reports',
-                      onPressed: busy ? null : refresh,
-                      icon: Icon(Icons.refresh, color: muted),
-                    ),
-                    IconButton(
-                      tooltip: 'Settings',
-                      onPressed: () => setState(() => section = 1),
-                      icon: Icon(Icons.settings_outlined, color: muted),
-                    ),
-                  ]
-                : const [],
+            actions: [
+              SafetyIconButton(
+                icon: Icons.settings_outlined,
+                label: 'Settings',
+                onTap: () => setState(() => section = 1),
+              ),
+            ],
           ),
     bottomNavigationBar: !signed
         ? null
@@ -519,12 +521,12 @@ class _FamilyHomeState extends State<FamilyHome> {
             index: section,
             onTap: (v) => setState(() => section = v),
             items: const [
-              SafetyDockItem(Icons.family_restroom, 'Children'),
-              SafetyDockItem(Icons.settings, 'Settings'),
+              SafetyDockItem(Icons.phone_android_outlined, 'Children'),
+              SafetyDockItem(Icons.settings_outlined, 'Settings'),
             ],
           ),
     body: !ready
-        ? Center(child: CircularProgressIndicator())
+        ? const Center(child: CircularProgressIndicator())
         : !signed
         ? loginView()
         : section == 1
@@ -532,40 +534,89 @@ class _FamilyHomeState extends State<FamilyHome> {
         : RefreshIndicator(
             onRefresh: refresh,
             child: ListView(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 116),
               children: [
-                if (busy) LinearProgressIndicator(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${children.length} protected devices connected',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: muted,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: .7,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Your Family',
+                            style: TextStyle(
+                              fontFamily: 'Space Grotesk',
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              color: ink,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SafetyIconButton(
+                      icon: Icons.refresh,
+                      label: 'Refresh reports',
+                      onTap: busy ? null : refresh,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (busy) const LinearProgressIndicator(),
                 if (error.isNotEmpty)
-                  Text(error, style: TextStyle(color: Colors.red)),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Text(error, style: TextStyle(color: danger)),
+                  ),
                 if (children.isNotEmpty)
                   Padding(
-                    padding: EdgeInsets.only(bottom: 14),
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: TextField(
                       onChanged: (v) => setState(() => childSearch = v),
                       decoration: InputDecoration(
                         hintText: 'Search children',
                         prefixIcon: Icon(Icons.search, color: muted, size: 20),
-                        isDense: true,
                         filled: true,
-                        fillColor: surface,
+                        fillColor: tonal,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(999),
-                          borderSide: BorderSide(color: edge),
+                          borderSide: BorderSide.none,
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(999),
-                          borderSide: BorderSide(color: edge),
+                          borderSide: BorderSide.none,
                         ),
                       ),
                     ),
                   ),
                 if (children.isEmpty && !busy)
                   panel([
-                    Text('No paired child phones yet'),
-                    SizedBox(height: 8),
+                    Text(
+                      'No paired child phones yet',
+                      style: TextStyle(
+                        fontFamily: 'Space Grotesk',
+                        fontSize: 19,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     Text(
                       'Pair each child phone with this account and start tracking.',
-                      style: TextStyle(color: muted),
+                      style: TextStyle(
+                        color: muted,
+                        fontSize: 13,
+                        height: 1.45,
+                      ),
                     ),
                   ]),
                 for (final child in children.where((c) {
@@ -575,12 +626,9 @@ class _FamilyHomeState extends State<FamilyHome> {
                       '${c['deviceId']}'.toLowerCase().contains(q);
                 }))
                   childCard(child),
-                Padding(
-                  padding: EdgeInsets.all(12),
-                  child: Text(
-                    'Reports refresh while open. Push notifications are not connected yet. This app does not call emergency services.',
-                    style: TextStyle(fontSize: 11, color: muted),
-                  ),
+                Text(
+                  'Reports refresh while open. Push notifications are not connected yet. This app does not call emergency services.',
+                  style: TextStyle(fontSize: 13, color: muted, height: 1.45),
                 ),
               ],
             ),
@@ -669,9 +717,8 @@ class _FamilyHomeState extends State<FamilyHome> {
                 ),
                 Theme(
                   data: Theme.of(context).copyWith(
-                    textTheme: Theme.of(
-                      context,
-                    ).textTheme.apply(bodyColor: muted),
+                    textTheme: Theme.of(context).textTheme
+                        .apply(bodyColor: muted),
                   ),
                   child: ExpansionTile(
                     iconColor: muted,
@@ -805,7 +852,7 @@ class _FamilyHomeState extends State<FamilyHome> {
   }
 
   Widget settingsView() => ListView(
-    padding: EdgeInsets.all(16),
+    padding: EdgeInsets.fromLTRB(16, 4, 16, 116),
     children: [
       panel([
         Row(
@@ -828,11 +875,15 @@ class _FamilyHomeState extends State<FamilyHome> {
                     FamilyApi.email.isEmpty
                         ? 'Parent account'
                         : FamilyApi.email,
-                    style: TextStyle(fontWeight: FontWeight.w800),
+                    style: TextStyle(
+                      fontFamily: 'Space Grotesk',
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Text(
                     'Signed in with Firebase Authentication. Remembered login required in the background.',
-                    style: TextStyle(fontSize: 11, color: muted),
+                    style: TextStyle(fontSize: 13, color: muted),
                   ),
                 ],
               ),
@@ -894,8 +945,7 @@ class _FamilyHomeState extends State<FamilyHome> {
                       await ZoneAlerts.disable();
                     }
                   } catch (_) {
-                    ZoneAlerts.status =
-                        'Could not save notification settings. Restart and retry.';
+                    ZoneAlerts.status = 'Could not save notification settings. Restart and retry.';
                   } finally {
                     progress.cancel();
                     ZoneAlerts.changing = false;
@@ -911,21 +961,21 @@ class _FamilyHomeState extends State<FamilyHome> {
         if (ZoneAlerts.status.contains('blocked'))
           Text(
             'Open Android Settings > Apps > Child Safety Parent > Notifications and allow notifications.',
-            style: TextStyle(fontSize: 11, color: muted),
+            style: TextStyle(fontSize: 13, color: muted),
           ),
         Text(
           'Alerts on entry and exit. While open: checks every 30 seconds. Background: Android schedules checks from 15 minutes; battery limits, no internet or force-stop can delay or stop alerts. Not instant push. Remembered login required in background.',
-          style: TextStyle(fontSize: 11, color: muted),
+          style: TextStyle(fontSize: 13, color: muted),
         ),
       ]),
       SizedBox(height: 16),
       panel([
         Text(
           'PUSH ALERTS',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
         SizedBox(height: 8),
-        Text(ParentPush.status, style: TextStyle(fontSize: 11, color: muted)),
+        Text(ParentPush.status, style: TextStyle(fontSize: 13, color: muted)),
         SizedBox(height: 12),
         FilledButton.icon(
           onPressed: () async {
@@ -954,7 +1004,7 @@ class _FamilyHomeState extends State<FamilyHome> {
         ),
         Text(
           'SOS, zone crossings, low battery and speed. Delivery depends on network, Android permissions and server availability.',
-          style: TextStyle(fontSize: 10, color: muted),
+          style: TextStyle(fontSize: 13, color: muted),
         ),
       ]),
       SizedBox(height: 16),
@@ -974,11 +1024,11 @@ class _FamilyHomeState extends State<FamilyHome> {
       panel([
         Text(
           'SESSION',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
         ),
         Divider(),
         FilledButton.icon(
-          style: FilledButton.styleFrom(backgroundColor: Color(0xffdc2626)),
+          style: FilledButton.styleFrom(backgroundColor: danger),
           onPressed: () async {
             try {
               await ParentPush.disable();
@@ -987,8 +1037,7 @@ class _FamilyHomeState extends State<FamilyHome> {
             } catch (_) {
               if (mounted)
                 setState(
-                  () => error =
-                      'Could not finish logout. You are still signed in; automatic refresh remains on. Retry when connected.',
+                  () => error = 'Could not finish logout. You are still signed in; automatic refresh remains on. Retry when connected.',
                 );
               return;
             }
@@ -1005,11 +1054,23 @@ class _FamilyHomeState extends State<FamilyHome> {
           label: Text('Logout'),
         ),
       ]),
+      panel([
+        Text('App version', style: TextStyle(color: muted, fontSize: 13)),
+        SizedBox(height: 4),
+        Text(
+          'v$appVersion',
+          style: TextStyle(
+            fontFamily: 'Space Grotesk',
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ]),
       Padding(
         padding: EdgeInsets.all(12),
         child: Text(
           'Reports refresh while open. Push notifications are not connected yet. This app does not call emergency services.',
-          style: TextStyle(fontSize: 11, color: muted),
+          style: TextStyle(fontSize: 13, color: muted),
         ),
       ),
     ],
@@ -1075,36 +1136,32 @@ class _FamilyHomeState extends State<FamilyHome> {
     final live = fresh(latest) && error.isEmpty;
     final name = child['childName']?.toString() ?? 'Child';
     final sos = latest?['emergency'] == true;
-    Widget stat(String a, String b, {bool accent = false}) => Expanded(
+    Widget stat(String title, String value) => Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 11, horizontal: 4),
-        margin: EdgeInsets.symmetric(horizontal: 3),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
-          color: accent
-              ? (ParentTheme.dark.value ? soft : soft)
-              : ParentTheme.dark.value
-              ? pale
-              : pale,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: accent ? soft : pale),
+          color: tonal,
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              a,
+              title,
               style: TextStyle(
                 fontSize: 9,
-                color: accent ? green : muted,
                 fontWeight: FontWeight.w700,
+                color: muted,
+                letterSpacing: .5,
               ),
             ),
-            SizedBox(height: 3),
+            const SizedBox(height: 2),
             Text(
-              b,
+              value,
               style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                color: accent ? green : ink,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: ink,
               ),
             ),
           ],
@@ -1112,195 +1169,211 @@ class _FamilyHomeState extends State<FamilyHome> {
       ),
     );
     return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(24),
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => ChildDetail(child: child)),
-          );
-          await refresh();
-        },
-        child: Stack(
-          children: [
-            panel([
-              Row(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          panel([
+            InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => ChildDetail(child: child)),
+                );
+                await refresh();
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      borderRadius: BorderRadius.circular(17),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      name.isEmpty ? '?' : name[0].toUpperCase(),
-                      style: TextStyle(
-                        color: onAccent,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: soft,
+                        foregroundColor: onSoft,
+                        child: Text(
+                          name.isEmpty ? '?' : name[0].toUpperCase(),
+                          style: const TextStyle(
+                            fontFamily: 'Space Grotesk',
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          crossAxisAlignment: WrapCrossAlignment.center,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               name,
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight: FontWeight.w800,
+                                color: ink,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
+                            Text(
+                              'Android • ${child['deviceId']}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12.5, color: muted),
+                            ),
+                            const SizedBox(height: 5),
                             pill(
                               live ? 'Live' : 'Last known',
-                              color: live ? green : muted,
+                              color: live ? accent : onAmber,
                             ),
                           ],
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'Android • ${child['deviceId']}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 11, color: muted),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 13),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: SizedBox(
-                  height: 120,
-                  child: Stack(
-                    children: [
-                      if (p != null)
-                        MiniMap(points: [p], fresh: live)
-                      else
-                        Center(
-                          child: Text(
-                            'Location unavailable',
-                            style: TextStyle(color: muted),
-                          ),
-                        ),
-                      Positioned(
-                        left: 8,
-                        bottom: 8,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: ink.withValues(alpha: .8),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${location?['city'] ?? 'Unknown location'}${location?['accuracy'] != null ? ' • ±${location!['accuracy']}m' : ''}',
-                            style: TextStyle(color: surface, fontSize: 9),
-                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => removeChild(child),
-                  icon: Icon(Icons.link_off, size: 16),
-                  label: Text('Remove device', style: TextStyle(fontSize: 11)),
-                ),
-              ),
-              SizedBox(height: 12),
-              Padding(
-                padding: EdgeInsets.only(bottom: 8),
-                child: Text(
-                  live
-                      ? 'Updated while the dashboard is open.'
-                      : p == null
-                      ? 'No GPS fix reported yet.'
-                      : 'Last known location • ${stamp(location?['fixAt'])}',
-                  style: TextStyle(fontSize: 11, color: muted),
-                ),
-              ),
-              Row(
-                children: [
-                  stat('BATTERY', '${latest?['battery'] ?? '--'}%'),
-                  stat('LAST REPORT', ago(latest?['receivedAt'])),
-                  stat(
-                    'STATUS',
-                    live
-                        ? 'Live'
-                        : p == null
-                        ? 'No GPS fix'
-                        : 'Stale',
-                    accent: live,
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(
+                      height: 96,
+                      child: Stack(
+                        children: [
+                          if (p != null)
+                            MiniMap(points: [p], fresh: live)
+                          else
+                            Container(
+                              color: tonal,
+                              child: Center(
+                                child: Text(
+                                  'Location unavailable',
+                                  style: TextStyle(color: muted),
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            left: 8,
+                            bottom: 8,
+                            right: 8,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 9,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: surface,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  '${location?['city'] ?? 'Unknown location'}${location?['accuracy'] != null ? ' • ±${location!['accuracy']}m' : ''}',
+                                  maxLines: 2,
+                                  style: TextStyle(
+                                    color: ink,
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      stat('BATTERY', '${latest?['battery'] ?? '--'}%'),
+                      const SizedBox(width: 8),
+                      stat('LAST REPORT', ago(latest?['receivedAt'])),
+                      const SizedBox(width: 8),
+                      stat(
+                        'STATUS',
+                        live
+                            ? 'Live'
+                            : p == null
+                            ? 'No GPS fix'
+                            : 'Stale',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: events.isEmpty ? tonal : amber,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text(
+                      events.isEmpty
+                          ? 'No zone alerts yet'
+                          : 'Zone Alert: ${events.first['entered'] == true ? 'Entered' : 'Left'} ${events.first['zoneName']} • ${stamp(events.first['fixAt'])}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: events.isEmpty ? muted : onAmber,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              SizedBox(height: 9),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(9),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    live
+                        ? 'Updated while the dashboard is open.'
+                        : p == null
+                        ? 'No GPS fix reported yet.'
+                        : 'Last known location • ${stamp(location?['fixAt'])}',
+                    style: TextStyle(fontSize: 13, height: 1.45, color: muted),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => removeChild(child),
+                  style: TextButton.styleFrom(foregroundColor: danger),
+                  child: const Text(
+                    'Remove device',
+                    style: TextStyle(
+                      fontSize: 13,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ]),
+          if (sos)
+            Positioned(
+              top: -9,
+              right: 10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: events.isEmpty
-                      ? ParentTheme.dark.value
-                            ? pale
-                            : pale
-                      : (ParentTheme.dark.value
-                            ? Color(0xff3a2b18)
-                            : Color(0xfffffbeb)),
-                  borderRadius: BorderRadius.circular(12),
+                  color: danger,
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  events.isEmpty
-                      ? 'No zone alerts yet'
-                      : 'Zone Alert: ${events.first['entered'] == true ? 'Entered' : 'Left'} ${events.first['zoneName']} • ${stamp(events.first['fixAt'])}',
+                  'SOS ACTIVE',
                   style: TextStyle(
-                    fontSize: 10,
-                    color: events.isEmpty ? muted : Color(0xff92400e),
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w800,
+                    color: pale,
+                    letterSpacing: 1.1,
                   ),
                 ),
               ),
-            ], radius: 24),
-            if (sos)
-              Positioned(
-                right: 0,
-                top: 0,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Color(0xffef4444),
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(24),
-                      bottomLeft: Radius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    'SOS ACTIVE',
-                    style: TextStyle(
-                      color: surface,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -1595,8 +1668,7 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate:
-                                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                             userAgentPackageName: 'com.childsafety.parent',
                           ),
                           if (selected != null)
@@ -1659,8 +1731,7 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                     metres > 10000 ||
                     selected == null) {
                   setDialog(
-                    () => formError =
-                        'Choose a centre, a name, and radius from 100 to 10,000 metres.',
+                    () => formError = 'Choose a centre, a name, and radius from 100 to 10,000 metres.',
                   );
                   return;
                 }
@@ -1787,257 +1858,180 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
       length: 5,
       initialIndex: widget.initialTab,
       child: Scaffold(
-        appBar: AppBar(
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "$name's Dashboard",
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-              ),
-              Text(
-                live
-                    ? 'Recent GPS fix • ${stamp(location?['fixAt'])} • ${location?['city'] ?? 'Location unavailable'}'
-                    : 'Last GPS fix: ${stamp(location?['fixAt'])}',
-                style: TextStyle(fontSize: 10, color: live ? green : muted),
-              ),
-            ],
-          ),
-          bottom: TabBar(
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
-            labelColor: green,
-            unselectedLabelColor: muted,
-            indicatorColor: green,
-            labelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-            tabs: [
-              Tab(text: 'Map & History'),
-              Tab(text: 'Safe zones (${safe.length})'),
-              Tab(text: 'SOS alerts'),
-              Tab(text: 'Sync interval'),
-              Tab(text: 'Phone activity'),
-            ],
-          ),
+        backgroundColor: pale,
+        appBar: SafetyDetailHeader(
+          name: name.toString(),
+          subtitle: live
+              ? 'Recent GPS fix • ${stamp(location?['fixAt'])} • ${location?['city'] ?? 'Location unavailable'}'
+              : 'Last GPS fix: ${stamp(location?['fixAt'])}',
+          labels: [
+            'Map & History',
+            'Safe zones (${safe.length})',
+            'SOS alerts',
+            'Sync interval',
+            'Phone activity',
+          ],
         ),
         body: busy
-            ? Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator())
             : TabBarView(
                 children: [
-                  Column(
+                  ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                     children: [
                       if (error.isNotEmpty)
-                        Text(error, style: TextStyle(color: Colors.red)),
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            MiniMap(
-                              key: ValueKey(
-                                'route-$playing-$playIndex-${playing ? '' : current}',
+                        Text(error, style: TextStyle(color: danger)),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(24),
+                        child: SizedBox(
+                          height: 190,
+                          child: Stack(
+                            children: [
+                              MiniMap(
+                                key: ValueKey(
+                                  'route-$playing-$playIndex-${playing ? '' : current}',
+                                ),
+                                points: shown,
+                                fresh: !playing && live,
+                                zones: safe,
                               ),
-                              points: shown,
-                              fresh: !playing && live,
-                              zones: safe,
-                            ),
-                            Positioned(
-                              bottom: 12,
-                              left: 12,
-                              right: 12,
-                              child: Column(
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: ink.withValues(alpha: .8),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      '$name • ${playing ? 'Recorded route' : location?['city'] ?? 'Location unavailable'}',
-                                      style: TextStyle(
-                                        color: surface,
-                                        fontSize: 11,
-                                      ),
+                              Positioned(
+                                top: 12,
+                                left: 12,
+                                right: 12,
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: pill(
+                                    '$name • ${playing ? 'Recorded route' : location?['city'] ?? 'Location unavailable'}',
+                                  ),
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 12,
+                                right: 12,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: surface,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    '${safe.length} safe zones • ${latest?['accuracy'] != null ? 'GPS ±${latest!['accuracy']}m' : 'GPS accuracy unavailable'}',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: muted,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Container(
-                                          padding: EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                            color: surface,
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            playing
-                                                ? 'Historical GPS • gaps may be missing'
-                                                : '${safe.length} safe zones • ${latest?['accuracy'] != null ? 'GPS ±${latest!['accuracy']}m' : 'GPS accuracy unavailable'}',
-                                            style: TextStyle(
-                                              fontSize: 10,
-                                              color: muted,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      SizedBox(width: 8),
-                                      FilledButton.icon(
-                                        style: FilledButton.styleFrom(
-                                          minimumSize: Size(0, 38),
-                                        ),
-                                        onPressed: pts.isEmpty
-                                            ? null
-                                            : () => togglePlayback(pts.length),
-                                        icon: Icon(
-                                          playing
-                                              ? Icons.stop
-                                              : Icons.play_arrow,
-                                          size: 14,
-                                        ),
-                                        label: Text(
-                                          playing
-                                              ? 'Stop'
-                                              : 'Play Route History',
-                                          style: TextStyle(fontSize: 10),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                      Container(
-                        color: surface,
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Row(
-                          children: [
-                            Text(
-                              'Timeline:',
-                              style: TextStyle(fontSize: 10, color: muted),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              minimumSize: const Size(0, 48),
                             ),
-                            Expanded(
-                              child: Slider(
-                                value: pts.isEmpty
-                                    ? 0
-                                    : playIndex
-                                          .clamp(0, pts.length - 1)
-                                          .toDouble(),
-                                max: pts.length <= 1 ? 1 : pts.length - 1.0,
-                                onChanged: pts.isEmpty
-                                    ? null
-                                    : (v) {
-                                        playback?.cancel();
-                                        setState(() {
-                                          playing = true;
-                                          playIndex = v.toInt();
-                                        });
-                                      },
-                              ),
+                            onPressed: pts.isEmpty
+                                ? null
+                                : () => togglePlayback(pts.length),
+                            icon: Icon(playing ? Icons.stop : Icons.play_arrow),
+                            label: Text(
+                              playing ? 'Stop' : 'Play route history',
                             ),
-                            Text(
-                              ordered.isEmpty
-                                  ? 'No history'
-                                  : DateFormat('h:mm a').format(
-                                      DateTime.parse(
-                                        ordered[playIndex.clamp(
-                                          0,
-                                          ordered.length - 1,
-                                        )]['fixAt'],
-                                      ).toLocal(),
-                                    ),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                          ),
+                          Text(
+                            'Historical GPS • gaps may be missing',
+                            style: TextStyle(fontSize: 13, color: muted),
+                          ),
+                        ],
+                      ),
+                      Slider(
+                        value: pts.isEmpty
+                            ? 0
+                            : playIndex.clamp(0, pts.length - 1).toDouble(),
+                        max: pts.length <= 1 ? 1 : pts.length - 1.0,
+                        onChanged: pts.isEmpty
+                            ? null
+                            : (v) {
+                                playback?.cancel();
+                                setState(() {
+                                  playing = true;
+                                  playIndex = v.toInt();
+                                });
+                              },
+                      ),
+                      Text(
+                        ordered.isEmpty
+                            ? 'No history'
+                            : 'Historical GPS • ${stamp(ordered[playIndex.clamp(0, ordered.length - 1)]['fixAt'])}',
+                        style: TextStyle(fontSize: 13, color: muted),
+                      ),
+                      const SizedBox(height: 14),
+                      panel([
+                        draftTitle('Recent fixes'),
+                        const SizedBox(height: 10),
+                        if (ordered.isEmpty)
+                          Text(
+                            'No recorded fixes yet',
+                            style: TextStyle(color: muted),
+                          ),
+                        for (final h in ordered.reversed)
+                          draftHistoryRow(
+                            stamp(h['fixAt']),
+                            h['city']?.toString() ?? 'Recorded location',
+                            '${h['accuracy'] != null ? '±${h['accuracy']} m' : 'Accuracy unavailable'} • ${h['battery'] ?? '--'}% battery',
+                          ),
+                      ]),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Route playback joins recorded points and may have gaps. Old reports are not live GPS.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: muted,
+                          height: 1.45,
                         ),
                       ),
                     ],
                   ),
                   ListView(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'GEOFENCED SAFE ZONES',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Text(
-                                  'Alerts need two fresh reports',
-                                  style: TextStyle(fontSize: 10, color: muted),
-                                ),
-                              ],
-                            ),
-                          ),
-                          FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              minimumSize: Size(0, 36),
-                            ),
-                            onPressed: addZone,
-                            icon: Icon(Icons.add, size: 14),
-                            label: Text(
-                              'Add Zone',
-                              style: TextStyle(fontSize: 11),
-                            ),
-                          ),
-                        ],
+                      FilledButton.icon(
+                        onPressed: addZone,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Zone'),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       if (safe.isEmpty)
-                        panel([
-                          Text(
-                            'No safe zones yet',
-                            style: TextStyle(color: muted),
-                          ),
-                        ]),
+                        panel([draftTitle('No safe zones yet')]),
                       for (final z in safe)
                         Padding(
-                          padding: EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.only(bottom: 14),
                           child: panel([
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: ParentTheme.dark.value ? soft : soft,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    Icons.home_outlined,
-                                    color: green,
-                                    size: 20,
-                                  ),
-                                ),
-                                SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
+                                      draftTitle(z['name'].toString()),
+                                      const SizedBox(height: 2),
                                       Text(
-                                        z['name'],
+                                        'Radius ${z['radius']} m',
                                         style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      Text(
-                                        'Radius: ${z['radius']}m',
-                                        style: TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 13,
                                           color: muted,
                                         ),
                                       ),
@@ -2050,230 +2044,160 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                                       : z['inside'] == true
                                       ? 'Inside'
                                       : 'Outside',
+                                  color: z['inside'] == true ? accent : onAmber,
                                 ),
-                                IconButton(
-                                  tooltip: 'Edit safe zone',
-                                  icon: Icon(Icons.edit_outlined, color: green),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(
+                                  'Entry and exit alerts',
+                                  style: TextStyle(fontSize: 13, color: muted),
+                                ),
+                                TextButton(
                                   onPressed: () => addZone(z),
+                                  child: const Text('Edit'),
                                 ),
-                                IconButton(
+                                TextButton(
                                   onPressed: () => deleteZone(z),
-                                  icon: Icon(
-                                    Icons.delete_outline,
-                                    size: 18,
-                                    color: muted,
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: danger,
                                   ),
+                                  child: const Text('Delete'),
                                 ),
                               ],
                             ),
                           ]),
                         ),
-                      SizedBox(height: 12),
-                      Text(
-                        'Recent zone alerts',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      for (final e in zones['events'] as List? ?? [])
-                        ListTile(
-                          title: Text(
-                            '${e['entered'] == true ? 'Entered' : 'Left'} ${e['zoneName']}',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          subtitle: Text(
+                      panel([
+                        draftTitle('Recent zone alerts'),
+                        for (final e in zones['events'] as List? ?? [])
+                          draftHistoryRow(
                             stamp(e['fixAt']),
-                            style: TextStyle(fontSize: 10),
+                            '${e['entered'] == true ? 'Entered' : 'Left'} ${e['zoneName']}',
+                            'Recorded zone event',
                           ),
-                        ),
+                      ]),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Alerts need two fresh reports. Up to 10 zones per device.',
+                        style: TextStyle(fontSize: 13, color: muted),
+                      ),
                     ],
                   ),
                   ListView(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                     children: [
-                      Text(
-                        'EMERGENCY SOS HISTORY',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      SizedBox(height: 16),
                       if (sos.isEmpty)
                         panel([
+                          draftTitle('Emergency SOS history'),
+                          const SizedBox(height: 10),
                           Text(
                             'No SOS reports received',
-                            style: TextStyle(color: muted),
+                            style: TextStyle(fontSize: 13, color: muted),
                           ),
                         ]),
                       for (final h in sos)
                         Padding(
-                          padding: EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.only(bottom: 14),
                           child: panel([
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(
-                                  Icons.warning_amber_rounded,
-                                  color: Colors.red,
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'SOS Button Pressed',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                      Text(
-                                        stamp(h['receivedAt']),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: muted,
-                                        ),
-                                      ),
-                                      SizedBox(height: 6),
-                                      Text(
-                                        '$name reported an emergency from ${h['city'] ?? 'an unknown location'}.',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: muted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              'EMERGENCY SOS HISTORY',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: muted,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: .8,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            draftTitle(
+                              'SOS Button Pressed, ${stamp(h['receivedAt'])}',
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              '$name reported an emergency from ${h['city'] ?? 'an unknown location'}.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.45,
+                                color: muted,
+                              ),
                             ),
                           ]),
                         ),
+                      const SizedBox(height: 14),
                       Text(
                         'Recorded device alerts. No emergency calls or acknowledgement workflow.',
-                        style: TextStyle(fontSize: 10, color: muted),
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.45,
+                          color: muted,
+                        ),
                       ),
                     ],
                   ),
                   ListView(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                     children: [
                       panel([
-                        Text(
-                          'BACKGROUND REPORTING FREQUENCY',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Divider(),
-                        label('Select Report Interval'),
+                        draftTitle('Report interval'),
+                        label('Location reports'),
                         DropdownButtonFormField<int>(
                           initialValue: interval,
                           items: [
-                            DropdownMenuItem(
-                              value: 30,
-                              child: Text('Every 30 seconds'),
-                            ),
-                            DropdownMenuItem(
-                              value: 60,
-                              child: Text('Every 1 minute'),
-                            ),
-                            DropdownMenuItem(
-                              value: 120,
-                              child: Text('Every 2 minutes'),
-                            ),
-                            DropdownMenuItem(
-                              value: 300,
-                              child: Text('Every 5 minutes'),
-                            ),
-                            DropdownMenuItem(
-                              value: 600,
-                              child: Text('Every 10 minutes'),
-                            ),
-                            DropdownMenuItem(
-                              value: 1800,
-                              child: Text('Every 30 minutes'),
-                            ),
-                            DropdownMenuItem(
-                              value: 3600,
-                              child: Text('Every 1 hour'),
-                            ),
+                            for (final v in [30, 60, 120, 300, 600, 1800, 3600])
+                              DropdownMenuItem(
+                                value: v,
+                                child: Text(
+                                  v == 30
+                                      ? 'Every 30 seconds'
+                                      : v == 3600
+                                      ? 'Every 1 hour'
+                                      : 'Every ${v ~/ 60} ${v == 60 ? 'minute' : 'minutes'}',
+                                ),
+                              ),
                           ],
                           onChanged: (v) => setState(() => interval = v!),
                         ),
-                        SizedBox(height: 12),
-                        Text(
-                          "Controls how often $name's phone sends reports. Applies on its next successful report.",
-                          style: TextStyle(fontSize: 11, color: muted),
-                        ),
-                        SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         FilledButton(
                           onPressed: saveInterval,
-                          child: Text('Save Interval Setting'),
+                          child: const Text('Save Interval Setting'),
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Text(
-                          'Long intervals can miss short zone visits. GPS may remain active, so battery savings are not guaranteed.',
-                          style: TextStyle(fontSize: 10, color: muted),
-                        ),
-                        if (error.isNotEmpty)
-                          Text(error, style: TextStyle(color: Colors.red)),
-                      ]),
-                      SizedBox(height: 16),
-                      panel([
-                        Text(
-                          'SAFETY ALERTS',
+                          "Controls how often $name's phone sends reports. Applies on its next successful report. Long intervals can miss short zone visits. GPS may remain active, so battery savings are not guaranteed.",
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            height: 1.45,
+                            color: muted,
                           ),
                         ),
+                        if (error.isNotEmpty)
+                          Text(error, style: TextStyle(color: danger)),
+                      ]),
+                      const SizedBox(height: 14),
+                      panel([
+                        draftTitle('Safety alerts'),
                         label('Low battery threshold'),
                         DropdownButtonFormField<int>(
                           initialValue: batteryThreshold,
                           items: [
-                            DropdownMenuItem(value: 0, child: Text('Off')),
-                            DropdownMenuItem(value: 10, child: Text('10%')),
-                            DropdownMenuItem(value: 15, child: Text('15%')),
-                            DropdownMenuItem(value: 20, child: Text('20%')),
-                            DropdownMenuItem(value: 30, child: Text('30%')),
+                            for (final v in [0, 10, 15, 20, 30])
+                              DropdownMenuItem(
+                                value: v,
+                                child: Text(v == 0 ? 'Off' : '$v%'),
+                              ),
                           ],
                           onChanged: (v) =>
                               setState(() => batteryThreshold = v!),
                         ),
-                        label('Speed alert'),
-                        ...speedAlerts
-                            .take(5)
-                            .map(
-                              (a) => ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(
-                                  a['title'] ?? 'Speed alert',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                                subtitle: Text(
-                                  '${a['body']}\nRecorded ${stamp(a['reportedAt'])}',
-                                  style: TextStyle(fontSize: 10),
-                                ),
-                              ),
-                            ),
-                        if (speedAlerts.isEmpty)
-                          Text(
-                            'No recorded speed alerts yet.',
-                            style: TextStyle(fontSize: 11, color: muted),
-                          ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: Text(
-                            'Enable speed alert',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          subtitle: Text(
-                            'Off by default',
-                            style: TextStyle(fontSize: 10),
-                          ),
+                          title: const Text('Speed alert'),
                           value: speedLimit > 0,
                           onChanged: (v) =>
                               setState(() => speedLimit = v ? 80 : 0),
@@ -2281,7 +2205,7 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                         if (speedLimit > 0)
                           Column(
                             children: [
-                              Text('$speedLimit km/h'),
+                              Text('Alert above $speedLimit km/h'),
                               Slider(
                                 min: 10,
                                 max: 200,
@@ -2292,29 +2216,43 @@ class _ChildDetailState extends State<ChildDetail> with WidgetsBindingObserver {
                               ),
                             ],
                           ),
-                        Text(
-                          'Tap Save Alert Settings to apply. Requires two fresh accurate GPS speed reports. Open-app checks every 30 seconds; background checks 15 minutes or later. Not instant push. GPS is an estimate.',
-                          style: TextStyle(fontSize: 10, color: muted),
-                        ),
-                        SizedBox(height: 12),
+                        for (final a in speedAlerts.take(5))
+                          draftHistoryRow(
+                            stamp(a['reportedAt']),
+                            a['title']?.toString() ?? 'Speed alert',
+                            '${a['body']}',
+                          ),
+                        if (speedAlerts.isEmpty)
+                          Text(
+                            'No recorded speed alerts yet.',
+                            style: TextStyle(fontSize: 13, color: muted),
+                          ),
+                        const SizedBox(height: 14),
                         FilledButton(
                           onPressed: saveAlerts,
-                          child: Text('Save Alert Settings'),
+                          child: const Text('Save Alert Settings'),
                         ),
-                      ]),
-                      SizedBox(height: 16),
-                      panel([
+                        const SizedBox(height: 14),
                         Text(
-                          'OFFLINE REPORTS',
+                          'Tap Save Alert Settings to apply. Requires two fresh accurate GPS speed reports. Open-app checks every 30 seconds; background checks 15 minutes or later. Not instant push. GPS is an estimate.',
                           style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            height: 1.45,
+                            color: muted,
                           ),
                         ),
-                        SizedBox(height: 8),
+                      ]),
+                      const SizedBox(height: 14),
+                      panel([
+                        draftTitle('Offline reports'),
+                        const SizedBox(height: 8),
                         Text(
                           'Updated child app stores up to 2,880 encrypted reports while offline, then uploads them in order when the connection returns. Original GPS times stay unchanged. Old reports are not live location; tracking stops if Android force-stops the app.',
-                          style: TextStyle(fontSize: 11, color: muted),
+                          style: TextStyle(
+                            fontSize: 13,
+                            height: 1.45,
+                            color: muted,
+                          ),
                         ),
                       ]),
                     ],

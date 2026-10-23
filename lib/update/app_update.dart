@@ -295,9 +295,8 @@ Future<void> checkUpdateManually(
   final info = await c.fetchLatest();
   if (!context.mounted) return;
   if (info == null) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('No update available')));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('No update available')));
     return;
   }
   await showUpdateDialog(context, info, checker: c);
@@ -382,14 +381,14 @@ class _UpdateDialogState extends State<_UpdateDialog> {
 
   @override
   Widget build(BuildContext context) {
-    const dim = Color(0xFF8A93A6);
+    final dim = Theme.of(context).colorScheme.onSurfaceVariant;
     final v = widget.info.version;
     final progress = total != null && total! > 0
         ? (received / total!).clamp(0.0, 1.0)
         : null;
     return AlertDialog(
-      backgroundColor: const Color(0xFF151A24),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       title: const Text('Software Update', textAlign: TextAlign.center),
       content: Column(
         mainAxisSize: MainAxisSize.min,
@@ -402,7 +401,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               _Phase.needsPermission => 'One permission needed',
               _Phase.installing => 'Opening installer...',
               _Phase.error => 'Update failed',
-            }, style: const TextStyle(color: dim, fontSize: 13)),
+            }, style: TextStyle(color: dim, fontSize: 13)),
           ),
           if (phase == _Phase.downloading) ...[
             const SizedBox(height: 12),
@@ -412,7 +411,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               total != null
                   ? '${(received / 1e6).toStringAsFixed(1)} / ${(total! / 1e6).toStringAsFixed(1)} MB'
                   : '${(received / 1e6).toStringAsFixed(1)} MB',
-              style: const TextStyle(color: dim, fontSize: 11),
+              style: TextStyle(color: dim, fontSize: 11),
             ),
           ],
           if (phase == _Phase.needsPermission)
