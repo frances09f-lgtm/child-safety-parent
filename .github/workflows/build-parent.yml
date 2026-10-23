@@ -1,12 +1,15 @@
 name: Build Child Safety Parent
 on:
   workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: parent-release
+  cancel-in-progress: false
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 40
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -17,6 +20,18 @@ jobs:
         with:
           flutter-version: '3.47.6'
           channel: stable
+      - name: Generate and push actual Flutter redesign
+        run: |
+          set -euo pipefail
+          if test -f tools/apply_parent_redesign.py; then
+            python3 tools/apply_parent_redesign.py
+            dart format lib/main.dart lib/pally.dart lib/activity.dart lib/update/app_update.dart lib/live/bug_report.dart
+            git rm tools/apply_parent_redesign.py
+            git add lib pubspec.yaml
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'parent: real draft-matched Flutter screens 1.4.10'
+            git push origin HEAD:master
+          fi
+          echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - name: Restore permanent signer
         env:
           CHILD_KEYSTORE_BASE64: ${{ secrets.CHILD_KEYSTORE_BASE64 }}
@@ -27,17 +42,21 @@ jobs:
           set -euo pipefail
           echo "$CHILD_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/child-release.jks"
           printf '\nCHILD_KEYSTORE_FILE=%s\nCHILD_KEYSTORE_PASSWORD=%s\nCHILD_KEY_ALIAS=%s\nCHILD_KEY_PASSWORD=%s\n' "$RUNNER_TEMP/child-release.jks" "$CHILD_KEYSTORE_PASSWORD" "$CHILD_KEY_ALIAS" "$CHILD_KEY_PASSWORD" >> android/gradle.properties
-      - run: flutter pub get && flutter analyze --no-fatal-infos
-      - run: flutter test
-      - run: flutter build apk --release --target-platform android-arm64 --build-name=1.4.9 --build-number=14
+      - name: Analyze
+        run: flutter pub get && flutter analyze --no-fatal-infos
+      - name: Tests
+        run: flutter test --reporter expanded
+      - name: Signed ARM64 APK
+        run: flutter build apk --release --target-platform android-arm64
       - uses: actions/upload-artifact@v4
         with:
           name: child-safety-parent-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-      - name: Publish green v1.4.9 APK
+      - name: Publish green v1.4.10 APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          test "$(sed -n 's/^version: //p' pubspec.yaml)" = '1.4.10+15'
           cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/ChildSafetyParent.apk"
-          gh release create v1.4.9 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "Child Safety Parent v1.4.9" --notes "Approved parent UI redesign with green home launcher icon. Signed ARM64 Android APK built after successful analysis and tests. No phone testing claimed."
+          gh release create v1.4.10 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.10' --notes 'Real parent Flutter redesign: Your Family list and child cards, solid green floating dock, protected-device header and five pill tabs, Map & History with recent-fix cards, Safe zones, SOS history, Sync interval, Phone activity and Settings. Light and dark themes. Login and API logic unchanged. Signed ARM64 APK after successful static analysis and tests. No phone testing claimed.'
