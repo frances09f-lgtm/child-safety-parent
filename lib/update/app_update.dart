@@ -445,7 +445,7 @@ class _UpdateDialogState extends State<_UpdateDialog> {
               child: SingleChildScrollView(
                 child: Text(
                   widget.info.notes,
-                  style: const TextStyle(fontSize: 12, color: dim),
+                  style: TextStyle(fontSize: 12, color: dim),
                 ),
               ),
             ),
