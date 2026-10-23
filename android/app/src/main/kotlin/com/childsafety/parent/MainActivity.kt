@@ -1,8 +1,10 @@
 package com.childsafety.parent
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterActivity
@@ -14,7 +16,52 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         registerUpdateChannel(flutterEngine)
+        registerBackgroundChannel(flutterEngine)
     }
+    // Background alerts: lets Settings check and ask for the battery
+    // exemption and open the app's notification settings.
+    private fun registerBackgroundChannel(flutterEngine: FlutterEngine) {
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app/background")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "isBatteryUnrestricted" -> {
+                        val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+                        result.success(
+                            Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+                                pm.isIgnoringBatteryOptimizations(packageName)
+                        )
+                    }
+                    "requestBatteryExemption" -> {
+                        try {
+                            startActivity(
+                                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                                    .setData(Uri.parse("package:$packageName"))
+                            )
+                        } catch (e: Exception) {
+                            try {
+                                startActivity(
+                                    Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                )
+                            } catch (e2: Exception) {
+                            }
+                        }
+                        result.success(null)
+                    }
+                    "openNotificationSettings" -> {
+                        try {
+                            startActivity(
+                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                            )
+                        } catch (e: Exception) {
+                        }
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
     // In-app update: APK is downloaded over HTTP in Dart and handed to the
     // Android package installer here. The only system steps are the one-time
     // "install unknown apps" toggle and the installer confirm, both owned by
