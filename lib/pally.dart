@@ -138,20 +138,27 @@ class SafetyHeader extends StatelessWidget implements PreferredSizeWidget {
                       ],
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontFamily: 'Space Grotesk',
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -.98,
-                        height: 1.08,
-                        color: ink,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: 'Space Grotesk',
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -.98,
+                          height: 1.08,
+                          color: ink,
+                        ),
                       ),
                     ),
                     if (subtitle != null)
                       Text(
                         subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(fontSize: 12.5, color: muted),
                       ),
                   ],
@@ -280,7 +287,7 @@ class SafetyDetailHeader extends StatelessWidget
     required this.labels,
   });
   @override
-  Size get preferredSize => const Size.fromHeight(168);
+  Size get preferredSize => const Size.fromHeight(176);
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -306,6 +313,8 @@ class SafetyDetailHeader extends StatelessWidget
                       children: [
                         Text(
                           'PROTECTED DEVICE',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 11,
                             color: muted,
@@ -314,11 +323,15 @@ class SafetyDetailHeader extends StatelessWidget
                           ),
                         ),
                         const SizedBox(height: 4),
-                        draftTitle("$name's Dashboard"),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: draftTitle("$name's Dashboard"),
+                        ),
                         Text(
                           subtitle,
                           style: TextStyle(fontSize: 12.5, color: muted),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],

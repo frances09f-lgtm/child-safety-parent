@@ -18,6 +18,7 @@ void main() {
   ParentTheme.dark.value=dark;tester.view.physicalSize=Size(width,844);tester.view.devicePixelRatio=1;
   addTearDown(tester.view.resetPhysicalSize);addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(const MaterialApp(home:DefaultTabController(length:5,child:Scaffold(appBar:SafetyDetailHeader(name:'Aarav',subtitle:'Last GPS fix: 9:42 AM',labels:['Map & History','Safe zones (2)','SOS alerts','Sync interval','Phone activity']),body:TabBarView(children:[Text('map body'),Text('zone body'),Text('sos body'),Text('sync body'),Text('activity body')])))));
+  await tester.ensureVisible(find.text('Safe zones (2)'));await tester.pumpAndSettle();
   await tester.tap(find.text('Safe zones (2)'));await tester.pumpAndSettle();expect(find.text('zone body'),findsOneWidget); expect(tester.takeException(),isNull);
  });
  }}
