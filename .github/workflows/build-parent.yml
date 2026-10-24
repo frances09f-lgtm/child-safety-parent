@@ -42,14 +42,14 @@ jobs:
         with:
           name: child-safety-parent-apk
           path: build/app/outputs/flutter-apk/app-release.apk
-      - name: Publish green v1.4.16 APK
+      - name: Publish green v1.4.17 APK
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          test "$(sed -n 's/^version: //p' pubspec.yaml)" = '1.4.16+21'
+          test "$(sed -n 's/^version: //p' pubspec.yaml)" = '1.4.17+22'
           cp build/app/outputs/flutter-apk/app-release.apk "$RUNNER_TEMP/ChildSafetyParent.apk"
-          gh release create v1.4.16 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.16' --notes 'Fixes the empty HTTPS server address on the login screen. The app now starts with the project server address pre-filled (the same address the child app documents), also after an update or a fresh install. The field stays editable and a saved address still wins. Login, billing and all other features are unchanged. Signed ARM + ARM64 APK after successful static analysis and tests. No phone testing claimed.'
+          gh release create v1.4.17 "$RUNNER_TEMP/ChildSafetyParent.apk#ChildSafetyParent.apk" --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SHA" --title 'Child Safety Parent v1.4.17' --notes 'Adds an SOS notification and Children tab ordering. The app reads the SOS alerts recorded on the server, so an SOS is not missed when a normal location report arrives right after it, and shows one urgent notification per SOS, also when the app is closed and background alerts are on. On the Children tab the child who pressed SOS last is shown first and the one before second. Includes the pre-filled server address from v1.4.16. Login, billing and all other features are unchanged. Signed ARM + ARM64 APK after successful static analysis and tests. No phone testing claimed.'
       - name: Update update-feed (child-safety-updates)
         env:
           FEED_TOKEN: ${{ secrets.UPDATES_FEED_TOKEN }}
