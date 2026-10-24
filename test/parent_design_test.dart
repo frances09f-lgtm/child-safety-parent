@@ -7,8 +7,8 @@ import 'package:child_safety_parent/live/bug_report.dart';
 
 void main() {
   test('release version matches in both files', () {
-    expect(appVersion, '1.4.16');
-    expect(appBuildNumber, 21);
+    expect(appVersion, '1.4.17');
+    expect(appBuildNumber, 22);
     expect(
       File('pubspec.yaml').readAsStringSync(),
       contains('version: $appVersion+$appBuildNumber'),

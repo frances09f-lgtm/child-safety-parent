@@ -325,6 +325,27 @@ class ZoneAlerts {
     'battery',
   };
 
+  /// SOS alerts from the server alert list with an id above [after], oldest
+  /// first. Other alert types and entries without a numeric id are skipped.
+  static List<Map<String, dynamic>> sosAlertsAfter(
+    Iterable<dynamic> alerts,
+    int after,
+  ) {
+    final out = alerts
+        .whereType<Map>()
+        .where(
+          (a) =>
+              a['id'] is num &&
+              (a['id'] as num) > after &&
+              (a['type']?.toString().toLowerCase() == 'sos' ||
+                  a['type']?.toString().toLowerCase() == 'emergency'),
+        )
+        .map((a) => Map<String, dynamic>.from(a))
+        .toList()
+      ..sort((a, b) => (a['id'] as num).compareTo(b['id'] as num));
+    return out;
+  }
+
   static Future<void> pollExtra({bool silent = false}) async {
     if (kIsWeb || !await pushAlertsEnabled()) return;
     final next = queue.then((_) => extraLocked(silent));
@@ -422,35 +443,38 @@ class ZoneAlerts {
         latest = id;
       }
       await FamilyApi.storage.write(key: cursorKey, value: '$latest');
+      // SOS: notify once for each new SOS alert the server recorded. This
+      // reads the alert list instead of the newest location report, so an SOS
+      // is not lost when a normal report arrives right after it. It has its
+      // own cursor, so older SOS alerts are never replayed after an update.
+      final sosCursorKey = 'sosAlertCursor:$account';
+      final sosPrevious = int.tryParse(
+        await FamilyApi.storage.read(key: sosCursorKey) ?? '',
+      );
+      var sosLatest = sosPrevious ?? 0;
+      for (final a in sosAlertsAfter(config['alerts'] as List? ?? [], 0)) {
+        final id = (a['id'] as num).toInt();
+        if (id <= sosLatest) continue;
+        if (!silent && sosPrevious != null) {
+          await _notify(
+            1200000000 + id,
+            a['title']?.toString() ?? 'SOS from a child phone',
+            a['body']?.toString() ??
+                'A child pressed the SOS button. Open the app to see the location.',
+            'sos_alerts',
+            'SOS alerts',
+            {'kind': 'alert', 'account': account, 'device': a['deviceId']},
+            urgent: true,
+          );
+        }
+        sosLatest = id;
+      }
+      await FamilyApi.storage.write(key: sosCursorKey, value: '$sosLatest');
       for (final d in devices) {
         final device = d['deviceId']?.toString();
         if (device == null) continue;
         final name = d['childName']?.toString() ?? 'Child';
         final report = reports[device];
-        // SOS: notify once for each new SOS report.
-        final sosKey = 'sosSeen:$account:$device';
-        final sosStored = await FamilyApi.storage.read(key: sosKey);
-        final sosNow = report != null && report['emergency'] == true
-            ? (report['receivedAt'] ?? report['fixAt'] ?? 'active').toString()
-            : '';
-        if (sosStored == null) {
-          await FamilyApi.storage.write(key: sosKey, value: sosNow);
-        } else if (sosNow.isNotEmpty && sosNow != sosStored) {
-          if (!silent) {
-            await _notify(
-              2000000000 + device.hashCode.abs() % 100000,
-              'SOS from $name',
-              '$name pressed the SOS button. Open the app to see the location.',
-              'sos_alerts',
-              'SOS alerts',
-              {'kind': 'alert', 'account': account, 'device': device},
-              urgent: true,
-            );
-          }
-          await FamilyApi.storage.write(key: sosKey, value: sosNow);
-        } else if (sosNow.isEmpty && sosStored.isNotEmpty) {
-          await FamilyApi.storage.write(key: sosKey, value: '');
-        }
         // Low battery: notify once when the level falls to the threshold.
         final threshold = num.tryParse('${d['lowBatteryThreshold'] ?? 0}') ?? 0;
         final level = num.tryParse('${report?['battery'] ?? ''}');
