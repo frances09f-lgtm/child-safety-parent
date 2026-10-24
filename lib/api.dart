@@ -11,7 +11,11 @@ class FamilyApi {
   // configuration, not a secret. Pre-filled so sign-in never asks for it;
   // the field stays editable for project moves.
   static const defaultKey = 'AIzaSyCh-l1is7a-wMWZGhHWUnh9rV0BkdvADbk';
-  static String server = '',
+  // Deployed HTTPS backend for this project. Documented in the README of
+  // frances09f-lgtm/child-safety-client ("Values you need"). Pre-filled so
+  // sign-in never opens with an empty address; the field stays editable.
+  static const defaultServer = 'https://child-safety-api-t76a.onrender.com';
+  static String server = defaultServer,
       key = defaultKey,
       email = '',
       _token = '',
@@ -19,7 +23,8 @@ class FamilyApi {
   static bool _remember = true;
   static DateTime _expires = DateTime(2000);
   static Future<bool> restore() async {
-    server = await storage.read(key: 'server') ?? '';
+    final savedServer = (await storage.read(key: 'server') ?? '').trim();
+    server = savedServer.isEmpty ? defaultServer : savedServer;
     key = await storage.read(key: 'key') ?? defaultKey;
     email = await storage.read(key: 'email') ?? '';
     final until = DateTime.tryParse(
