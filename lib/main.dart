@@ -15,6 +15,7 @@ import 'zone_alerts.dart';
 import 'background_health.dart';
 import 'history_today.dart';
 import 'zone_status.dart';
+import 'sos_order.dart';
 import 'activity.dart';
 import 'live/bug_report.dart';
 
@@ -258,6 +259,7 @@ class _FamilyHomeState extends State<FamilyHome> {
       confirmPass = TextEditingController();
   List<Map<String, dynamic>> children = [];
   final lastFixes = <String, Map<String, dynamic>>{};
+  final sosRank = <String, int>{};
   Timer? timer;
   final email = TextEditingController(),
       password = TextEditingController(),
@@ -384,9 +386,17 @@ class _FamilyHomeState extends State<FamilyHome> {
       try {
         await ZoneAlerts.pollSpeed();
       } catch (_) {}
+      try {
+        final feed = await FamilyApi.request('/api/alerts');
+        if (feed is Map) {
+          sosRanks(feed['alerts'] as List? ?? []).forEach((device, rank) {
+            if (rank > (sosRank[device] ?? 0)) sosRank[device] = rank;
+          });
+        }
+      } catch (_) {}
       if (mounted)
         setState(() {
-          children = data;
+          children = orderBySos(data, sosRank);
           error = '';
         });
     } catch (_) {

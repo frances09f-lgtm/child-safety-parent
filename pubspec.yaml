@@ -1,7 +1,7 @@
 name: child_safety_parent
 description: Private family overview and child location dashboard.
 publish_to: none
-version: 1.4.16+21
+version: 1.4.17+22
 environment:
   sdk: ^3.10.4
 dependencies:
